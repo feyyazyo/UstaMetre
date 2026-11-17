@@ -1,20 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:ustametre/core/theme/app_theme.dart';
 import 'package:ustametre/features/calculations/calculation_page.dart';
 
-Future<void> pumpPage(WidgetTester tester, {String? categoryId}) async {
-  tester.view.physicalSize = const Size(1080, 2340);
-  tester.view.devicePixelRatio = 3;
-  addTearDown(tester.view.reset);
-  await tester.pumpWidget(
-    MaterialApp(
-      theme: AppTheme.dark(),
-      home: CalculationPage(initialCategoryId: categoryId),
-    ),
-  );
-  await tester.pumpAndSettle();
-}
+import '../helpers.dart' hide reveal, inKey, bar;
+
+Future<void> pumpPage(WidgetTester tester, {String? categoryId}) =>
+    pumpScreen(tester, CalculationPage(initialCategoryId: categoryId));
 
 Finder get pageList => find
     .descendant(

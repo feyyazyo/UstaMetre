@@ -3,8 +3,13 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/trade_category.dart';
+import '../../engine/calculators/marble_project_calculator.dart';
+import '../../engine/calculators/pvc_joinery_calculator.dart';
+import '../../engine/costing/cost_item.dart';
+import '../../engine/costing/cost_sheet.dart';
 import '../../engine/measurement.dart';
-import '../../engine/number_format.dart';
+import '../costing/cost_items_section.dart';
+import '../costing/pricing_options.dart';
 import 'calculation_form.dart';
 import 'widgets/number_field.dart';
 import 'widgets/result_card.dart';
@@ -31,21 +36,36 @@ class _CalculationPageState extends State<CalculationPage> {
       f: TextEditingController(
         text: switch (f) {
           CalcField.quantity => '1',
-          CalcField.vat => '20',
           _ => '',
         },
       )..addListener(_onChanged),
   };
 
+  final _pricing = PricingOptionsController();
+  CostSheet _extras = const CostSheet();
+
   void _onChanged() => setState(() {});
+
+  @override
+  void initState() {
+    super.initState();
+    _pricing.addListener(_onChanged);
+  }
 
   @override
   void dispose() {
     for (final c in _controllers.values) {
       c.dispose();
     }
+    _pricing.dispose();
     super.dispose();
   }
+
+  List<CostTemplate> get _templates => switch (_categoryId) {
+    'marble_granite' => MarbleCatalog.extras,
+    'pvc_joinery' => PvcCatalog.extras,
+    _ => const [],
+  };
 
   TradeCategory get _category =>
       TradeCategories.all.firstWhere((c) => c.id == _categoryId);
@@ -77,8 +97,18 @@ class _CalculationPageState extends State<CalculationPage> {
     final evaluation = evaluateForm(
       mode: _mode,
       unit: _unit,
-      values: {for (final e in _controllers.entries) e.key: e.value.text},
+      values: {
+        for (final e in _controllers.entries) e.key: e.value.text,
+        CalcField.vat: _pricing.vat.text,
+      },
+      extras: _extras,
+      discount: _pricing.discount.value,
     );
+    final pricingError = _pricing.error;
+    final result = pricingError == null ? evaluation.result : null;
+    final message = pricingError == null
+        ? evaluation.message
+        : 'Fiyatlandırma: $pricingError';
     final modes = modesForCategory(_categoryId);
 
     Widget section(String title) => Padding(
@@ -88,7 +118,7 @@ class _CalculationPageState extends State<CalculationPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.newCalculation)),
-      bottomNavigationBar: _LiveTotalBar(evaluation: evaluation),
+      bottomNavigationBar: LiveTotalBar(result: result, message: message),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: ListView(
@@ -189,96 +219,21 @@ class _CalculationPageState extends State<CalculationPage> {
                   integerOnly: f == CalcField.quantity,
                 ),
               ),
-            const SizedBox(height: 8),
-            if (evaluation.result case final result?)
-              ResultCard(result: result)
+            section('Ek maliyetler'),
+            CostItemsSection(
+              key: const ValueKey('extras_section'),
+              sheet: _extras,
+              templates: _templates,
+              onChanged: (sheet) => setState(() => _extras = sheet),
+            ),
+            section('Fiyatlandırma'),
+            PricingOptionsSection(controller: _pricing),
+            const SizedBox(height: 20),
+            if (result != null)
+              ResultCard(result: result, display: _pricing.display)
             else
-              Card(
-                key: const ValueKey('result_placeholder'),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline, color: AppColors.gold),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          evaluation.message ?? 'Ölçüleri girin.',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              ResultPlaceholder(message: message ?? 'Ölçüleri girin.'),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Ekranın altında sabit duran, her girişte güncellenen özet çubuğu.
-/// Tek elle kullanımda sonuç için aşağı kaydırmak gerekmez.
-class _LiveTotalBar extends StatelessWidget {
-  const _LiveTotalBar({required this.evaluation});
-
-  final FormEvaluation evaluation;
-
-  @override
-  Widget build(BuildContext context) {
-    final result = evaluation.result;
-    final String label;
-    final String value;
-    if (result == null) {
-      label = evaluation.message ?? 'Ölçüleri girin.';
-      value = '';
-    } else if (result.price case final price?) {
-      label = 'Genel toplam';
-      value = price.grandTotal.format();
-    } else {
-      final main = result.figures.firstWhere(
-        (f) => f.highlighted,
-        orElse: () => result.figures.first,
-      );
-      label = main.label;
-      value = formatQuantity(main.value, main.unit);
-    }
-
-    return Container(
-      key: const ValueKey('live_total'),
-      decoration: const BoxDecoration(
-        color: AppColors.card,
-        border: Border(top: BorderSide(color: AppColors.outline)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 15,
-                  ),
-                ),
-              ),
-              if (value.isNotEmpty)
-                Text(
-                  value,
-                  style: const TextStyle(
-                    color: AppColors.gold,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-            ],
-          ),
         ),
       ),
     );

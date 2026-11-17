@@ -4,9 +4,11 @@ import '../../engine/calculation_result.dart';
 import '../../engine/calculator.dart';
 import '../../engine/calculators/marble_countertop_calculator.dart';
 import '../../engine/calculators/measurement_calculator.dart';
+import '../../engine/costing/cost_sheet.dart';
 import '../../engine/measurement.dart';
 import '../../engine/money.dart';
 import '../../engine/number_parser.dart';
+import '../../engine/pricing.dart';
 
 /// Hesaplama ekranındaki giriş alanları.
 enum CalcField {
@@ -51,7 +53,6 @@ enum CalcMode {
         CalcField.waste,
         CalcField.materialPrice,
         CalcField.laborPrice,
-        CalcField.vat,
       ];
     }
     final t = measurementType!;
@@ -63,7 +64,6 @@ enum CalcMode {
       CalcField.quantity,
       CalcField.waste,
       CalcField.unitPrice,
-      CalcField.vat,
     ];
   }
 
@@ -116,11 +116,14 @@ FormEvaluation evaluateForm({
   required CalcMode mode,
   required LengthUnit unit,
   required Map<CalcField, String> values,
+  CostSheet extras = const CostSheet(),
+  Discount? discount,
 }) {
   final errors = <CalcField, String>{};
   final parsed = <CalcField, Decimal?>{};
 
-  for (final field in mode.fields) {
+  // KDV, fiyatlandırma bölümünden gelir ve her modda geçerlidir.
+  for (final field in [...mode.fields, CalcField.vat]) {
     final raw = (values[field] ?? '').trim();
     if (raw.isEmpty) {
       parsed[field] = null;
@@ -169,6 +172,8 @@ FormEvaluation evaluateForm({
           materialPricePerSquareMeter: money(CalcField.materialPrice),
           laborPricePerLinearMeter: money(CalcField.laborPrice),
           vatPercent: parsed[CalcField.vat],
+          extras: extras,
+          discount: discount,
         ),
       );
     } else {
@@ -184,6 +189,8 @@ FormEvaluation evaluateForm({
           wastePercent: parsed[CalcField.waste],
           unitPrice: money(CalcField.unitPrice),
           vatPercent: parsed[CalcField.vat],
+          extras: extras,
+          discount: discount,
         ),
       );
     }

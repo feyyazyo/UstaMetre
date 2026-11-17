@@ -15,6 +15,7 @@ class NumberField extends StatelessWidget {
     this.suffix,
     this.errorText,
     this.integerOnly = false,
+    this.allowNegative = false,
   });
 
   final TextEditingController controller;
@@ -23,6 +24,9 @@ class NumberField extends StatelessWidget {
   final String? errorText;
   final bool integerOnly;
 
+  /// Eksi işaretine izin verir (ör. profil reçetesindeki kesim payı).
+  final bool allowNegative;
+
   @override
   Widget build(BuildContext context) {
     return TextField(
@@ -30,7 +34,9 @@ class NumberField extends StatelessWidget {
       keyboardType: TextInputType.numberWithOptions(decimal: !integerOnly),
       inputFormatters: [
         FilteringTextInputFormatter.allow(
-          integerOnly ? RegExp(r'[0-9]') : RegExp(r'[0-9.,]'),
+          integerOnly
+              ? RegExp(r'[0-9]')
+              : (allowNegative ? RegExp(r'[0-9.,\-]') : RegExp(r'[0-9.,]')),
         ),
       ],
       style: const TextStyle(fontSize: 20, color: AppColors.textPrimary),
