@@ -1,0 +1,383 @@
+import 'package:material_ui/material_ui.dart';
+
+import '../../../core/theme/app_colors.dart';
+import '../../../engine/calculators/pvc_joinery_calculator.dart';
+import '../../../engine/measurement.dart';
+import '../../../shared/input_parsing.dart';
+import '../widgets/number_field.dart';
+
+enum _ProfileMode {
+  none('Profil yok'),
+  manual('Manuel metraj'),
+  recipe('Profil reçetesi');
+
+  const _ProfileMode(this.label);
+
+  final String label;
+}
+
+Future<JoineryItem?> showJoineryItemEditor(
+  BuildContext context, {
+  required JoineryItem initial,
+  required LengthUnit unit,
+  required List<ProfileRecipe> recipes,
+}) => Navigator.of(context).push<JoineryItem>(
+  MaterialPageRoute(
+    fullscreenDialog: true,
+    builder: (_) =>
+        JoineryItemEditorPage(initial: initial, unit: unit, recipes: recipes),
+  ),
+);
+
+class JoineryItemEditorPage extends StatefulWidget {
+  const JoineryItemEditorPage({
+    super.key,
+    required this.initial,
+    required this.unit,
+    required this.recipes,
+  });
+
+  final JoineryItem initial;
+  final LengthUnit unit;
+  final List<ProfileRecipe> recipes;
+
+  @override
+  State<JoineryItemEditorPage> createState() => _JoineryItemEditorPageState();
+}
+
+class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
+  JoineryItem get _i => widget.initial;
+  late JoineryType _type = _i.type;
+  late final _name = TextEditingController(text: _i.name);
+  late final _width = TextEditingController(text: decimalToInput(_i.width));
+  late final _height = TextEditingController(text: decimalToInput(_i.height));
+  late final _quantity = TextEditingController(text: '${_i.quantity}');
+  late final _glassType = TextEditingController(text: _i.glassType);
+  late final _glassPrice = TextEditingController(
+    text: moneyToInput(_i.glassPricePerSquareMeter),
+  );
+  late final _glassArea = TextEditingController(
+    text: decimalToInput(_i.glassAreaPerUnit),
+  );
+  late _ProfileMode _profileMode = switch (_i.profile) {
+    null => _ProfileMode.none,
+    ManualProfile() => _ProfileMode.manual,
+    RecipeProfile() => _ProfileMode.recipe,
+  };
+  late final _profileMeters = TextEditingController(
+    text: _i.profile is ManualProfile
+        ? decimalToInput((_i.profile! as ManualProfile).metersPerUnit)
+        : '',
+  );
+  late final _profilePrice = TextEditingController(
+    text: _i.profile is ManualProfile
+        ? moneyToInput((_i.profile! as ManualProfile).pricePerMeter)
+        : '',
+  );
+  late String? _recipeId = switch (_i.profile) {
+    RecipeProfile(:final recipe) => recipe.id,
+    _ => widget.recipes.isEmpty ? null : widget.recipes.first.id,
+  };
+  late final _accessory = TextEditingController(
+    text: moneyToInput(_i.accessoryPricePerUnit),
+  );
+  late bool _flyScreen = _i.flyScreen;
+  late final _flyScreenPrice = TextEditingController(
+    text: moneyToInput(_i.flyScreenPricePerUnit),
+  );
+  bool _submitted = false;
+
+  List<TextEditingController> get _all => [
+    _name,
+    _width,
+    _height,
+    _quantity,
+    _glassType,
+    _glassPrice,
+    _glassArea,
+    _profileMeters,
+    _profilePrice,
+    _accessory,
+    _flyScreenPrice,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    for (final c in _all) {
+      c.addListener(() => setState(() {}));
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _all) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  ({JoineryItem? item, Map<String, String> errors}) _build() {
+    final errors = <String, String>{};
+    T? take<T>(String key, ParsedField<T> f, {bool needed = false}) {
+      if (f.error != null) {
+        errors[key] = f.error!;
+      } else if (needed && f.value == null && _submitted) {
+        errors[key] = 'Bu alan gerekli';
+      }
+      return f.value;
+    }
+
+    final width = take('width', parseField(_width.text), needed: true);
+    final height = take('height', parseField(_height.text), needed: true);
+    final quantity = take('quantity', parseCountField(_quantity.text));
+    final glassPrice = take('glassPrice', parseMoneyField(_glassPrice.text));
+    final glassArea = take('glassArea', parseField(_glassArea.text));
+    final accessory = take('accessory', parseMoneyField(_accessory.text));
+    final flyPrice = take(
+      'flyScreenPrice',
+      parseMoneyField(_flyScreenPrice.text),
+    );
+
+    ProfileSpec? profile;
+    switch (_profileMode) {
+      case _ProfileMode.none:
+        break;
+      case _ProfileMode.manual:
+        final meters = take(
+          'profileMeters',
+          parseField(_profileMeters.text),
+          needed: true,
+        );
+        final price = take(
+          'profilePrice',
+          parseMoneyField(_profilePrice.text),
+          needed: true,
+        );
+        if (meters != null && price != null) {
+          profile = ManualProfile(metersPerUnit: meters, pricePerMeter: price);
+        }
+      case _ProfileMode.recipe:
+        final recipe = widget.recipes
+            .where((r) => r.id == _recipeId)
+            .firstOrNull;
+        if (recipe == null) {
+          if (_submitted) errors['recipe'] = 'Bir reçete seçin';
+        } else {
+          profile = RecipeProfile(recipe);
+        }
+    }
+
+    if (errors.isNotEmpty ||
+        width == null ||
+        height == null ||
+        quantity == null) {
+      return (item: null, errors: errors);
+    }
+    if (_profileMode != _ProfileMode.none && profile == null) {
+      return (item: null, errors: errors);
+    }
+    return (
+      item: JoineryItem(
+        id: _i.id,
+        type: _type,
+        name: _name.text.trim(),
+        width: width,
+        height: height,
+        quantity: quantity,
+        glassType: _glassType.text.trim(),
+        glassPricePerSquareMeter: glassPrice,
+        glassAreaPerUnit: glassArea,
+        profile: profile,
+        accessoryPricePerUnit: accessory,
+        flyScreen: _flyScreen,
+        flyScreenPricePerUnit: flyPrice,
+      ),
+      errors: errors,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final built = _build();
+    final e = built.errors;
+    final u = widget.unit.symbol;
+    Widget gap() => const SizedBox(height: 12);
+    Widget title(String t) => Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 8),
+      child: Text(t, style: Theme.of(context).textTheme.titleSmall),
+    );
+    NumberField num(
+      String key,
+      TextEditingController c,
+      String label, {
+      String? suffix,
+      bool integer = false,
+    }) => NumberField(
+      key: ValueKey('j_$key'),
+      controller: c,
+      label: label,
+      suffix: suffix,
+      integerOnly: integer,
+      errorText: e[key],
+    );
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Doğrama kalemi')),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          SegmentedButton<JoineryType>(
+            key: const ValueKey('j_type'),
+            showSelectedIcon: false,
+            style: SegmentedButton.styleFrom(
+              minimumSize: const Size.fromHeight(52),
+              selectedBackgroundColor: AppColors.gold,
+              selectedForegroundColor: AppColors.onGold,
+            ),
+            segments: [
+              for (final t in JoineryType.values)
+                ButtonSegment(
+                  value: t,
+                  label: Text(t.label, key: ValueKey('j_type_${t.name}')),
+                ),
+            ],
+            selected: {_type},
+            onSelectionChanged: (s) => setState(() => _type = s.first),
+          ),
+          gap(),
+          TextField(
+            key: const ValueKey('j_name'),
+            controller: _name,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: const InputDecoration(
+              labelText: 'Ad (isteğe bağlı, ör. Salon penceresi)',
+            ),
+          ),
+          gap(),
+          num('width', _width, 'En', suffix: u),
+          gap(),
+          num('height', _height, 'Boy', suffix: u),
+          gap(),
+          num('quantity', _quantity, 'Adet', suffix: 'adet', integer: true),
+          title('Cam'),
+          TextField(
+            key: const ValueKey('j_glassType'),
+            controller: _glassType,
+            decoration: const InputDecoration(
+              labelText: 'Cam türü (ör. Isıcam 4+16+4)',
+            ),
+          ),
+          gap(),
+          num('glassPrice', _glassPrice, 'Cam fiyatı (₺/m²)', suffix: '₺'),
+          gap(),
+          num(
+            'glassArea',
+            _glassArea,
+            'Ölçülen cam alanı (adet başı)',
+            suffix: 'm²',
+          ),
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Text(
+              'Boş bırakılırsa dış ölçü alanı kullanılır ve sonuç yaklaşık '
+              'olarak işaretlenir.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ),
+          title('Profil'),
+          DropdownButtonFormField<_ProfileMode>(
+            key: const ValueKey('j_profileMode'),
+            initialValue: _profileMode,
+            dropdownColor: AppColors.card,
+            decoration: const InputDecoration(labelText: 'Profil metrajı'),
+            items: [
+              for (final m in _ProfileMode.values)
+                DropdownMenuItem(value: m, child: Text(m.label)),
+            ],
+            onChanged: (m) => setState(() => _profileMode = m!),
+          ),
+          if (_profileMode == _ProfileMode.manual) ...[
+            gap(),
+            num(
+              'profileMeters',
+              _profileMeters,
+              'Profil metrajı (adet başı)',
+              suffix: 'm',
+            ),
+            gap(),
+            num(
+              'profilePrice',
+              _profilePrice,
+              'Profil fiyatı (₺/m)',
+              suffix: '₺',
+            ),
+          ],
+          if (_profileMode == _ProfileMode.recipe) ...[
+            gap(),
+            if (widget.recipes.isEmpty)
+              Text(
+                'Henüz profil reçetesi yok. Doğrama ekranındaki "Profil '
+                'reçeteleri" bölümünden oluşturabilirsiniz.',
+                key: const ValueKey('j_noRecipes'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              )
+            else
+              DropdownButtonFormField<String>(
+                key: const ValueKey('j_recipe'),
+                initialValue: _recipeId,
+                dropdownColor: AppColors.card,
+                decoration: InputDecoration(
+                  labelText: 'Reçete',
+                  errorText: e['recipe'],
+                ),
+                items: [
+                  for (final r in widget.recipes)
+                    DropdownMenuItem(
+                      value: r.id,
+                      child: Text(
+                        '${r.name}${r.verified ? '' : ' (doğrulanmamış)'}',
+                      ),
+                    ),
+                ],
+                onChanged: (id) => setState(() => _recipeId = id),
+              ),
+          ],
+          title('Aksesuar ve sineklik'),
+          num(
+            'accessory',
+            _accessory,
+            'Aksesuar ve mekanizma (₺/adet)',
+            suffix: '₺',
+          ),
+          gap(),
+          SwitchListTile(
+            key: const ValueKey('j_flyScreen'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Sineklik'),
+            value: _flyScreen,
+            activeThumbColor: AppColors.gold,
+            onChanged: (v) => setState(() => _flyScreen = v),
+          ),
+          if (_flyScreen)
+            num(
+              'flyScreenPrice',
+              _flyScreenPrice,
+              'Sineklik fiyatı (₺/adet)',
+              suffix: '₺',
+            ),
+          const SizedBox(height: 24),
+          FilledButton(
+            key: const ValueKey('j_save'),
+            onPressed: () {
+              setState(() => _submitted = true);
+              final item = _build().item;
+              if (item != null) Navigator.of(context).pop(item);
+            },
+            child: const Text('Kaydet'),
+          ),
+        ],
+      ),
+    );
+  }
+}

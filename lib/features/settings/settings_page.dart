@@ -3,6 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_colors.dart';
 import '../../shared/widgets/coming_soon.dart';
+import '../calculations/pvc/recipe_pages.dart';
+import '../price_list/price_list_page.dart';
 import '../../shared/widgets/status_badge.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -25,11 +27,49 @@ class SettingsPage extends StatelessWidget {
       ),
     );
 
+    Widget link(
+      Key key,
+      IconData icon,
+      String title,
+      String subtitle,
+      Widget page,
+    ) => Card(
+      child: ListTile(
+        key: key,
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: Text(
+          subtitle,
+          style: const TextStyle(color: AppColors.textSecondary),
+        ),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () =>
+            Navigator.of(context)
+                .push(MaterialPageRoute<void>(builder: (_) => page)),
+      ),
+    );
+
     return Scaffold(
       appBar: AppBar(title: const Text(AppStrings.settingsTitle)),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
+          link(
+            const ValueKey('settings_price_list'),
+            Icons.sell_outlined,
+            'Fiyat Listesi',
+            'Malzeme, işçilik, aksesuar, nakliye ve kendi kalemleriniz',
+            const PriceListPage(),
+          ),
+          const SizedBox(height: 12),
+          link(
+            const ValueKey('settings_recipes'),
+            Icons.rule_folder_outlined,
+            'Profil Reçeteleri',
+            'PVC doğrama için kasa, kanat ve diğer profil formülleri',
+            const RecipeListPage(),
+          ),
+          const SizedBox(height: 12),
           item(
             Icons.badge_outlined,
             'İşletme Profili',
@@ -76,7 +116,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Sürüm 0.1.0 · Çevrimdışı çalışır; verileriniz '
+                    'Sürüm 0.3.0 · Çevrimdışı çalışır; verileriniz '
                     'cihazınızda kalır.',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),

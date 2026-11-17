@@ -5,6 +5,7 @@ import '../../core/theme/app_colors.dart';
 import '../../domain/trade_category.dart';
 import '../../shared/widgets/status_badge.dart';
 import 'calculation_page.dart';
+import 'category_hub_page.dart';
 import 'category_icons.dart';
 
 /// Hesaplamalar sekmesi: yeni hesaplama başlatma ve meslek kategorileri.
@@ -76,7 +77,13 @@ class CalculationsPage extends StatelessWidget {
                     : AppStrings.genericCalculations,
                 highlighted: category.isAvailable,
               ),
-              onTap: () => openCalculation(context, categoryId: category.id),
+              onTap: () => CategoryHubPage.projectPageFor(category.id) == null
+                  ? openCalculation(context, categoryId: category.id)
+                  : Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => CategoryHubPage(category: category),
+                      ),
+                    ),
             ),
           );
         },
