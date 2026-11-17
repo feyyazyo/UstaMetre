@@ -6,68 +6,78 @@ Tüm meslek grupları için ölçüm, hesaplama ve fiyat teklifi hazırlama uygu
 Flutter ile geliştirilir, öncelikli platform Android'dir. Arayüz Türkçedir ve
 uygulama çevrimdışı (offline-first) çalışacak şekilde tasarlanmıştır.
 
-## Durum (Sprint 2)
+## Durum (Sprint 3)
 
 | Alan | Durum |
 |---|---|
 | Proje iskeleti, tema, alt gezinme (5 ekran) | ✅ |
-| Ana sayfa ve 4 kısayol | ✅ Yeni Hesaplama doğrudan hesap ekranını açar |
-| Hesaplama ekranı: meslek seçimi, mm/cm/m, fire, birim fiyat, KDV, anlık sonuç, "Nasıl hesaplandı?" | ✅ |
-| Genel hesap türleri: uzunluk, alan, hacim, metre tül, çevre, adet, manuel | ✅ Tüm kategorilerde kullanılabilir |
-| Mermer ve granit: tezgâh m², fireli m², metre tül, malzeme + işçilik, KDV | ✅ Özel hesap |
+| Hızlı hesap: uzunluk, alan, hacim, metre tül, çevre, adet, manuel (tüm kategoriler) | ✅ |
+| Ortak ek maliyet sistemi: ekle, düzenle, sil, kopyala, kendi kalemini oluştur, fiyat listesine kaydet | ✅ Tüm hesap ekranlarında |
+| İndirim (yüzde / tutar), değiştirilebilir KDV, KDV dahil/hariç gösterim | ✅ |
+| Fiyat listesi: malzeme, işçilik, aksesuar, nakliye, diğer; fiyat ve birim geçmişi | ✅ Cihazda saklanır |
+| Mermer ve granit: çok parçalı tezgâh, kenar seçimli sakal/pah/rodaj/kenar işleme, evye, ocak, delikler, nakliye, montaj | ✅ Özel hesap |
+| PVC kapı ve pencere: pencere, kapı, balkon kapısı; cam, profil (manuel / reçete), aksesuar, sineklik, montaj, nakliye | ✅ Özel hesap (profil reçetesi doğrulanmadıkça **tahmini**) |
 | Diğer 11 kategorinin mesleğe özel hesapları | ⏳ Henüz yok (arayüzde "Genel hesap") |
-| Proje / teklif / müşteri kaydı, yerel veritabanı | ⏳ Sonraki sprintler |
+| Hesap sonuçlarını kaydetme, proje / teklif / müşteri, PDF teklif | ⏳ Sonraki sprintler (veri yapısı hazır: `CalculationResult.toJson`) |
 | GitHub Actions: analyze, test, APK artifact | ✅ |
 
 ### Hesap kuralları
 
-- Ölçüler seçilen birimden (mm/cm/m) metreye kesin olarak çevrilir.
-- Fire net miktara yüzde olarak eklenir; **adet** hesabında fireli miktar yukarı
-  tam sayıya yuvarlanır.
-- Satır tutarı = fireli miktar × birim fiyat, kuruşa yarım yukarı yuvarlanır.
-- KDV, kuruşa yuvarlanmış ara toplam üzerinden hesaplanır; genel toplam = ara
-  toplam + KDV (kuruşu kuruşuna tutar).
-- Mermer tezgâhta malzeme **fireli m²** üzerinden, işçilik **metre tül**
-  (uzunluk × adet) üzerinden fiyatlanır.
+- Ölçüler seçilen birimden (mm/cm/m) metreye kesin olarak çevrilir; `double` kullanılmaz.
+- Satır tutarı = miktar × birim fiyat, kuruşa yarım yukarı yuvarlanır.
+- Sıra: **ara toplam → indirim → KDV matrahı → KDV → genel toplam**; her adım
+  kuruşa yuvarlanır ve `ara toplam − indirim + KDV = genel toplam` kuruşu kuruşuna tutar.
+- KDV dahil gösterimde satırlar KDV eklenmiş gösterilir; bağlayıcı olan genel toplamdır.
+- Fire, malzeme ve işçilik bağımsızdır:
+  - Mermer: fire yalnızca malzemeye (m²); tezgâh işçiliği ve kenar işlemleri net ölçüden.
+  - PVC: profil firesi yalnızca profile, cam firesi yalnızca cama.
+  - Adet hesabında fireli miktar yukarı tam sayıya yuvarlanır.
+- Kenar işlemleri: her parçada her işlem için kenar seçilir (ön/arka = uzunluk,
+  sol/sağ = derinlik); metre tül = seçilen kenarların uzunlukları × adet toplamı.
+
+### Tahmini hesaplar (bilinçli olarak kesin gösterilmez)
+
+- **Profil reçetesi:** Kesim formülleri (kasa, kanat, orta kayıt, çıta…) açılım türüne
+  ve üretici sistemine göre değişir. Reçete kullanıcı tarafından "doğrulandı" olarak
+  işaretlenmedikçe profil satırları "(tahmini)" etiketlenir ve uyarı gösterilir.
+- **Cam alanı:** Ölçülen cam alanı girilmezse dış ölçü alanı kullanılır ve sonuç
+  "yaklaşık" uyarısıyla gösterilir.
+
+### Fiyat listesi ve eski hesaplar
+
+- Fiyat veya birim değiştiğinde eski kayıt silinmez, geçmişe eklenir (`PricePoint`).
+- Listeden hesaba eklenen kalem fiyatı **kopyalar** ve kaynağını (`PriceSource`:
+  kayıt kimliği + fiyat tarihi) tutar. Liste sonradan değişse de hesaplanmış kalemin
+  tutarı değişmez.
+- Veriler cihazda (SharedPreferences, JSON, sürüm bilgili) saklanır; okunamayan kayıt
+  silinmez, yedeklenir.
 
 ## Klasör yapısı
 
 ```
 lib/
-├── main.dart                 # Giriş noktası
+├── main.dart                 # Giriş: cihazdaki kataloğu yükler
 ├── app/                      # MaterialApp ve alt gezinme kabuğu
-├── core/
-│   ├── constants/            # Türkçe arayüz metinleri
-│   └── theme/                # Renk paleti ve tema
+├── core/                     # Türkçe metinler, renkler, tema
 ├── domain/                   # Saf Dart iş modelleri (meslek kategorileri)
 ├── engine/                   # Saf Dart hesaplama motoru (Flutter'a bağımlı DEĞİL)
-│   ├── calculator.dart       # Calculator<I, O> sözleşmesi
-│   ├── money.dart            # Kuruş hassasiyetli para (BigInt)
-│   ├── measurement.dart      # Uzunluk / alan (Decimal)
-│   ├── number_parser.dart    # "1.250,75" gibi Türkçe sayı girişi
-│   ├── number_format.dart    # Türkçe sayı/miktar biçimi
-│   ├── pricing.dart          # Maliyet satırları, ara toplam, KDV
-│   ├── calculation_result.dart
-│   └── calculators/          # Genel ölçü, mermer tezgâh, dikdörtgen alan
-├── features/                 # Ekranlar (özellik bazlı)
-│   ├── home/  calculations/  projects/  quotes/  customers/  settings/
-└── shared/widgets/           # Ortak arayüz bileşenleri
+│   ├── money.dart, measurement.dart, number_parser.dart, number_format.dart
+│   ├── pricing.dart          # Satır, indirim, KDV, özet
+│   ├── price_steps.dart      # "Nasıl hesaplandı?" fiyat adımları
+│   ├── calculation_result.dart  # Sonuç + JSON (PDF teklife hazır)
+│   ├── costing/              # CostItem, CostSheet, PriceList (geçmişli)
+│   └── calculators/          # Genel ölçü, mermer (hızlı + proje), PVC doğrama
+├── data/                     # Offline depolama ve katalog (fiyat listesi, reçeteler)
+├── features/
+│   ├── calculations/         # Hızlı hesap, kategori seçimi, marble/, pvc/
+│   ├── costing/              # Ortak ek maliyet editörü, fiyatlandırma seçenekleri
+│   ├── price_list/           # Fiyat listesi ekranı
+│   └── home/ projects/ quotes/ customers/ settings/
+└── shared/                   # Ortak widget'lar, giriş ayrıştırma
 test/
-├── engine/                   # Motor birim testleri
-├── architecture/             # Katman sınırı testleri
-└── widgets/                  # Widget testleri
+├── engine/  data/  features/  architecture/  widgets/
+└── helpers.dart
 ```
-
-### Temel kurallar
-
-- **Motor arayüzden bağımsızdır:** `lib/engine` ve `lib/domain` Flutter içe
-  aktarmaz. Bu kural `test/architecture/layer_boundaries_test.dart` ile
-  otomatik denetlenir.
-- **Kayan nokta yok:** Para `Money` (tam sayı kuruş), ölçüler `Decimal` ile
-  tutulur. Motor kodunda `double` kullanımı test ile engellenir.
-- **Dürüst durum:** Bir kategori yalnızca hesaplamaları arayüze bağlanıp test
-  edildiğinde `ModuleStatus.available` yapılır.
-- **Ücretli servis / yapay zekâ API'si yok;** veriler cihazda kalır.
 
 ## Geliştirme
 
