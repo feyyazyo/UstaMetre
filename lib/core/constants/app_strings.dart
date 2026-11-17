@@ -21,6 +21,8 @@ abstract final class AppStrings {
 
   static const quickActions = 'Hızlı İşlemler';
   static const comingSoon = 'Yakında';
+  static const specialCalculations = 'Özel hesap';
+  static const genericCalculations = 'Genel hesap';
   static const comingSoonMessage =
       'Bu özellik geliştirme aşamasında. Sonraki sürümlerde eklenecek.';
 }

@@ -6,6 +6,7 @@ IconData categoryIcon(String categoryId) => switch (categoryId) {
   'ceramic_tile' => Icons.grid_view_outlined,
   'furniture_carpentry' => Icons.chair_outlined,
   'glass_aluminium' => Icons.window_outlined,
+  'pvc_joinery' => Icons.sensor_door_outlined,
   'iron_joinery' => Icons.fence_outlined,
   'paint' => Icons.format_paint_outlined,
   'construction_renovation' => Icons.construction_outlined,

@@ -60,6 +60,10 @@ final class Area implements Comparable<Area> {
 
   Area times(Decimal factor) => Area._(squareMeters * factor);
 
+  /// Alan × yükseklik → hacim.
+  Volume operator *(Length height) =>
+      Volume.cubicMeters(squareMeters * height.meters);
+
   @override
   int compareTo(Area other) => squareMeters.compareTo(other.squareMeters);
 
@@ -72,4 +76,28 @@ final class Area implements Comparable<Area> {
 
   @override
   String toString() => '${squareMeters.toString()} m²';
+}
+
+/// Kesin ondalık değerli hacim (m³).
+final class Volume implements Comparable<Volume> {
+  const Volume._(this.cubicMeters);
+
+  final Decimal cubicMeters;
+
+  factory Volume.cubicMeters(Decimal value) => Volume._(value);
+
+  Volume times(Decimal factor) => Volume._(cubicMeters * factor);
+
+  @override
+  int compareTo(Volume other) => cubicMeters.compareTo(other.cubicMeters);
+
+  @override
+  bool operator ==(Object other) =>
+      other is Volume && other.cubicMeters == cubicMeters;
+
+  @override
+  int get hashCode => cubicMeters.hashCode;
+
+  @override
+  String toString() => '${cubicMeters.toString()} m³';
 }

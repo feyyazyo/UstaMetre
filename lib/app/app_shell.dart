@@ -41,7 +41,7 @@ class _AppShellState extends State<AppShell> {
         index: _tab.index,
         children: [
           HomePage(
-            onNewCalculation: () => _select(AppTab.calculations),
+            onNewCalculation: () => CalculationsPage.openCalculation(context),
             onNewProject: () => _select(AppTab.projects),
             onNewQuote: () => _select(AppTab.quotes),
             onCustomers: _openCustomers,

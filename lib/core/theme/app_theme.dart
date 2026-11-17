@@ -104,6 +104,32 @@ abstract final class AppTheme {
         minVerticalPadding: 14,
       ),
       dividerTheme: const DividerThemeData(color: AppColors.outline),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AppColors.card,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 18,
+        ),
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        floatingLabelStyle: const TextStyle(color: AppColors.gold),
+        suffixStyle: const TextStyle(
+          color: AppColors.textSecondary,
+          fontSize: 16,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: const BorderSide(color: AppColors.outline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: const BorderSide(color: AppColors.outline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radius),
+          borderSide: const BorderSide(color: AppColors.gold, width: 1.5),
+        ),
+      ),
     );
   }
 }

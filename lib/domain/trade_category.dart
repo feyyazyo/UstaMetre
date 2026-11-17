@@ -38,15 +38,29 @@ final class TradeCategory {
 
 /// İlk sürümde desteklenecek meslek kategorileri.
 ///
-/// Sprint 1 itibarıyla tüm kategoriler [ModuleStatus.planned] durumundadır.
-/// Bir kategorinin hesaplamaları arayüze bağlanıp test edildiğinde durumu
-/// [ModuleStatus.available] yapılmalıdır.
+/// Tüm kategoriler genel hesap türlerini (uzunluk, alan, hacim, metre tül,
+/// çevre, adet, manuel) kullanabilir. [ModuleStatus.available], mesleğe özel
+/// hesapların arayüze bağlanıp test edildiği anlamına gelir. Sprint 3
+/// itibarıyla mermer ve granit ile PVC kapı ve pencere özel hesaplara sahiptir.
 abstract final class TradeCategories {
   static const List<TradeCategory> all = [
     TradeCategory(
       id: 'marble_granite',
       name: 'Mermer ve granit',
-      description: 'Tezgâh, basamak, denizlik ve plaka hesapları',
+      description: 'Çok parçalı tezgâh, kenar işlemleri, evye ve montaj',
+      status: ModuleStatus.available,
+      calculatorIds: [
+        'marble.project',
+        'marble.countertop',
+        'generic.measurement',
+      ],
+    ),
+    TradeCategory(
+      id: 'pvc_joinery',
+      name: 'PVC kapı ve pencere',
+      description: 'Pencere, kapı, balkon kapısı; cam, profil, aksesuar',
+      status: ModuleStatus.available,
+      calculatorIds: ['pvc.joinery', 'generic.measurement'],
     ),
     TradeCategory(
       id: 'ceramic_tile',

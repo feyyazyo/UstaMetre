@@ -25,6 +25,19 @@ void main() {
       expect(parseDecimal('12.75'), d('12.75'));
     });
 
+    test('fiyat girişleri', () {
+      expect(parseDecimal('3.200'), d('3200'));
+      expect(parseDecimal('3.200,50'), d('3200.5'));
+      expect(parseDecimal('99,99'), d('99.99'));
+      expect(parseDecimal('0,005'), d('0.005'));
+    });
+
+    test('ölçü girişleri', () {
+      expect(parseDecimal('62'), d('62'));
+      expect(parseDecimal('250,5'), d('250.5'));
+      expect(parseDecimal('1.250'), d('1250'));
+    });
+
     test('boşlukları yok sayar', () {
       expect(parseDecimal(' 1 250,5 '), d('1250.5'));
     });
