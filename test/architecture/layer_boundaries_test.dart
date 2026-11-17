@@ -39,17 +39,18 @@ void main() {
     expect(offenders, isEmpty);
   });
 
-  test('12 meslek kategorisi tanımlı, kimlikler benzersiz', () {
+  test('13 meslek kategorisi tanımlı, kimlikler benzersiz', () {
     final ids = TradeCategories.all.map((c) => c.id).toList();
-    expect(ids, hasLength(12));
-    expect(ids.toSet(), hasLength(12));
+    expect(ids, hasLength(13));
+    expect(ids.toSet(), hasLength(13));
   });
 
-  test('Sprint 2: yalnızca mermer ve granit özel hesaplı olarak işaretli', () {
+  test('Sprint 3: yalnızca mermer ve PVC özel hesaplı olarak işaretli', () {
     // Bir kategorinin özel hesapları arayüze bağlanıp test edildiğinde bu
     // test güncellenmelidir.
     expect(TradeCategories.all.where((c) => c.isAvailable).map((c) => c.id), [
       'marble_granite',
+      'pvc_joinery',
     ]);
   });
 }

@@ -103,7 +103,7 @@ void main() {
   });
 
   testWidgets(
-    'hesaplamalar ekranı 12 kategoriyi özel/genel etiketiyle listeler',
+    'hesaplamalar ekranı 13 kategoriyi özel/genel etiketiyle listeler',
     (tester) async {
       await pumpApp(tester);
       await tester.tap(navItem(AppStrings.navCalculations));
