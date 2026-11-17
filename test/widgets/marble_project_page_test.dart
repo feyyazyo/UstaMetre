@@ -106,7 +106,9 @@ void main() {
     await pumpScreen(tester, const MarbleProjectPage());
     await tapKey(tester, 'add_piece');
     await tapKey(tester, 'piece_save');
+    expect(find.byKey(const ValueKey('piece_error')), findsOneWidget);
+    await reveal(tester, 'piece_length', up: true);
     expect(find.text('Bu alan gerekli'), findsNWidgets(2));
-    expect(find.byKey(const ValueKey('piece_save')), findsOneWidget);
+    expect(find.text('Tezgâh parçası'), findsOneWidget); // editör açık kaldı
   });
 }
