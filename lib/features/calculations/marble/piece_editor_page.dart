@@ -147,6 +147,18 @@ class _PieceEditorPageState extends State<PieceEditorPage> {
               ],
             ),
           ],
+          if (_submitted &&
+              (length.value == null ||
+                  depth.value == null ||
+                  quantity.value == null))
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                'Kaydedilemedi: uzunluk, derinlik ve adedi kontrol edin.',
+                key: const ValueKey('piece_error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ),
           const SizedBox(height: 24),
           FilledButton(
             key: const ValueKey('piece_save'),

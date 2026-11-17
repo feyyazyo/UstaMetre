@@ -197,6 +197,25 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
     );
   }
 
+  static const _fieldNames = {
+    'width': 'En',
+    'height': 'Boy',
+    'quantity': 'Adet',
+    'glassPrice': 'Cam fiyatı',
+    'glassArea': 'Cam alanı',
+    'profileMeters': 'Profil metrajı',
+    'profilePrice': 'Profil fiyatı',
+    'recipe': 'Reçete',
+    'accessory': 'Aksesuar fiyatı',
+    'flyScreenPrice': 'Sineklik fiyatı',
+  };
+
+  String _missingSummary(Map<String, String> errors) {
+    if (errors.isEmpty) return 'profil bilgisini tamamlayın.';
+    final names = [for (final k in errors.keys) _fieldNames[k] ?? k];
+    return '${names.join(', ')} alanlarını kontrol edin.';
+  }
+
   @override
   Widget build(BuildContext context) {
     final built = _build();
@@ -287,6 +306,7 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
           ),
           title('Profil'),
           DropdownButtonFormField<_ProfileMode>(
+            isExpanded: true,
             key: const ValueKey('j_profileMode'),
             initialValue: _profileMode,
             dropdownColor: AppColors.card,
@@ -324,6 +344,7 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
               )
             else
               DropdownButtonFormField<String>(
+                isExpanded: true,
                 key: const ValueKey('j_recipe'),
                 initialValue: _recipeId,
                 dropdownColor: AppColors.card,
@@ -365,6 +386,15 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
               _flyScreenPrice,
               'Sineklik fiyatı (₺/adet)',
               suffix: '₺',
+            ),
+          if (_submitted && built.item == null)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Text(
+                'Kaydedilemedi: ${_missingSummary(e)}',
+                key: const ValueKey('j_error'),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
             ),
           const SizedBox(height: 24),
           FilledButton(

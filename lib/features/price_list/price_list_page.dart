@@ -197,6 +197,7 @@ class _PriceItemEditorPageState extends State<PriceItemEditorPage> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<CostKind>(
+            isExpanded: true,
             key: const ValueKey('price_category'),
             initialValue: _category,
             dropdownColor: AppColors.card,
@@ -209,6 +210,7 @@ class _PriceItemEditorPageState extends State<PriceItemEditorPage> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<CostUnit>(
+            isExpanded: true,
             key: const ValueKey('price_unit'),
             initialValue: _unit,
             dropdownColor: AppColors.card,

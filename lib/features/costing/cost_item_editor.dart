@@ -126,6 +126,7 @@ class _CostItemEditorPageState extends State<CostItemEditorPage> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<CostKind>(
+            isExpanded: true,
             key: const ValueKey('cost_category'),
             initialValue: _category,
             dropdownColor: AppColors.card,

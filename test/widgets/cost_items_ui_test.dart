@@ -119,20 +119,7 @@ void main() {
     await tester.pump(const Duration(seconds: 5));
     await tester.pumpAndSettle();
     await tapKey(tester, 'add_cost_item');
-    final priceTile = find.byKey(ValueKey('add_price_${saved.id}'));
-    await tester.scrollUntilVisible(
-      priceTile,
-      100,
-      scrollable: find
-          .descendant(
-            of: find.byType(DraggableScrollableSheet),
-            matching: find.byType(Scrollable),
-          )
-          .first,
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(priceTile);
-    await tester.pumpAndSettle();
+    await tapInSheet(tester, 'add_price_${saved.id}');
     await fillCostEditor(tester, quantity: '2');
     expect(bar('₺1.080,00'), findsOneWidget); // (300 + 600) × 1,2
   });

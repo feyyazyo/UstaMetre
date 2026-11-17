@@ -79,3 +79,22 @@ Finder inKey(String key, String text) =>
 
 /// Ekranın altındaki sabit özet çubuğunda metin.
 Finder bar(String text) => inKey('live_total', text);
+
+/// Alt paneldeki (DraggableScrollableSheet) öğeye kaydırıp dokunur.
+Future<void> tapInSheet(WidgetTester tester, String key) async {
+  final tile = find.byKey(ValueKey(key));
+  await tester.scrollUntilVisible(
+    tile,
+    100,
+    scrollable: find
+        .descendant(
+          of: find.byType(DraggableScrollableSheet),
+          matching: find.byType(Scrollable),
+        )
+        .first,
+  );
+  await tester.ensureVisible(tile);
+  await tester.pumpAndSettle();
+  await tester.tap(tile);
+  await tester.pumpAndSettle();
+}

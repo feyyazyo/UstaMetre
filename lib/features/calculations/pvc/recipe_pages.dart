@@ -282,6 +282,7 @@ class _RecipeEditorPageState extends State<RecipeEditorPage> {
                     ),
                     const SizedBox(height: 8),
                     DropdownButtonFormField<ProfileRole>(
+                      isExpanded: true,
                       initialValue: c.role,
                       dropdownColor: AppColors.card,
                       decoration: const InputDecoration(labelText: 'Tür'),

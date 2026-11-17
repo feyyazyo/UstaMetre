@@ -96,6 +96,7 @@ class PricingOptionsSection extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<DiscountMode>(
+            isExpanded: true,
             key: const ValueKey('discount_mode'),
             initialValue: controller.discountMode,
             dropdownColor: AppColors.card,
