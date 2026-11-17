@@ -2,10 +2,12 @@ import 'package:decimal/decimal.dart';
 
 import '../calculation_result.dart';
 import '../calculator.dart';
+import '../costing/cost_sheet.dart';
 import '../measurement.dart';
 import '../money.dart';
 import '../number_format.dart';
 import '../pricing.dart';
+import '../price_steps.dart';
 import 'validation.dart';
 
 /// Tüm meslek gruplarında kullanılabilen genel hesap türleri.
@@ -49,6 +51,8 @@ final class MeasurementInput {
     this.wastePercent,
     this.unitPrice,
     this.vatPercent,
+    this.extras = const CostSheet(),
+    this.discount,
   });
 
   final MeasurementType type;
@@ -70,6 +74,10 @@ final class MeasurementInput {
   /// Sonuç biriminin (m, m², m³, mtül, adet, birim) birim fiyatı.
   final Money? unitPrice;
   final Decimal? vatPercent;
+
+  /// Ek maliyet kalemleri (aksesuar, nakliye, montaj…).
+  final CostSheet extras;
+  final Discount? discount;
 }
 
 /// Uzunluk, alan, hacim, metre tül, çevre, adet ve manuel hesap.
@@ -207,52 +215,24 @@ final class MeasurementCalculator
       );
     }
 
-    PriceSummary? price;
     final unitPrice = input.unitPrice;
-    if (unitPrice != null) {
-      price = PriceSummary.fromLines([
-        CostLine(
-          label: type.label,
-          kind: CostKind.material,
-          quantity: total,
-          unit: symbol,
-          unitPrice: unitPrice,
-        ),
-      ], vatPercent: vatRate);
-      addPriceSteps(steps, price);
-    }
+    final price = buildPriceSummary(
+      lines: [
+        if (unitPrice != null)
+          CostLine(
+            label: type.label,
+            kind: CostKind.material,
+            quantity: total,
+            unit: symbol,
+            unitPrice: unitPrice,
+          ),
+      ],
+      steps: steps,
+      extras: input.extras,
+      vatPercent: vatRate,
+      discount: input.discount,
+    );
 
     return CalculationResult(figures: figures, price: price, steps: steps);
   }
-}
-
-/// Fiyat satırlarını, ara toplamı, KDV'yi ve genel toplamı adımlara ekler.
-void addPriceSteps(List<String> steps, PriceSummary price) {
-  for (final line in price.lines) {
-    steps.add(
-      '${line.label} tutarı = '
-      '${formatQuantity(line.quantity, line.unit, maxDecimals: 6)} × '
-      '${line.unitPrice.format()}/${line.unit} = ${line.amount.format()}',
-    );
-  }
-  if (price.lines.length > 1) {
-    steps.add(
-      'Ara toplam = '
-      '${price.lines.map((l) => l.amount.format()).join(' + ')} = '
-      '${price.subtotal.format()}',
-    );
-  } else {
-    steps.add('Ara toplam = ${price.subtotal.format()}');
-  }
-  if (price.vatPercent > Decimal.zero) {
-    steps.add(
-      'KDV ${formatPercent(price.vatPercent)} = '
-      '${price.subtotal.format()} × ${formatPercent(price.vatPercent)} = '
-      '${price.vat.format()}',
-    );
-  }
-  steps.add(
-    'Genel toplam = ${price.subtotal.format()} + ${price.vat.format()} = '
-    '${price.grandTotal.format()}',
-  );
 }

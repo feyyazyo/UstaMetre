@@ -17,6 +17,13 @@ final class ResultFigure {
 
   /// Sonucun ana değeri mi (arayüzde vurgulanır).
   final bool highlighted;
+
+  Map<String, Object?> toJson() => {
+    'label': label,
+    'value': value.toString(),
+    'unit': unit,
+    'highlighted': highlighted,
+  };
 }
 
 /// Bir hesaplamanın tam sonucu: ölçüler, isteğe bağlı fiyat özeti ve
@@ -26,6 +33,7 @@ final class CalculationResult {
     required this.figures,
     required this.steps,
     this.price,
+    this.warnings = const [],
   });
 
   final List<ResultFigure> figures;
@@ -35,4 +43,17 @@ final class CalculationResult {
 
   /// "Nasıl hesaplandı?" bölümünde gösterilen adımlar.
   final List<String> steps;
+
+  /// Uyarılar (ör. doğrulanmamış profil formülü). Arayüzde belirgin
+  /// gösterilir ve teklife aktarılırken korunmalıdır.
+  final List<String> warnings;
+
+  /// Sonucun tamamını (ölçüler, satırlar, toplamlar, adımlar) düz veri olarak
+  /// verir. İleride PDF teklif ve kayıt sistemine bu yapı aktarılacaktır.
+  Map<String, Object?> toJson() => {
+    'figures': [for (final f in figures) f.toJson()],
+    'price': price?.toJson(),
+    'steps': steps,
+    'warnings': warnings,
+  };
 }

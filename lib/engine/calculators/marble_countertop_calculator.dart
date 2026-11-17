@@ -2,11 +2,12 @@ import 'package:decimal/decimal.dart';
 
 import '../calculation_result.dart';
 import '../calculator.dart';
+import '../costing/cost_sheet.dart';
 import '../measurement.dart';
 import '../money.dart';
 import '../number_format.dart';
+import '../price_steps.dart';
 import '../pricing.dart';
-import 'measurement_calculator.dart' show addPriceSteps;
 import 'validation.dart';
 
 final class MarbleCountertopInput {
@@ -19,6 +20,8 @@ final class MarbleCountertopInput {
     this.materialPricePerSquareMeter,
     this.laborPricePerLinearMeter,
     this.vatPercent,
+    this.extras = const CostSheet(),
+    this.discount,
   });
 
   final LengthUnit unit;
@@ -39,6 +42,8 @@ final class MarbleCountertopInput {
   /// İşçilik fiyatı (₺/mtül); tezgâh uzunluğu üzerinden uygulanır.
   final Money? laborPricePerLinearMeter;
   final Decimal? vatPercent;
+  final CostSheet extras;
+  final Discount? discount;
 }
 
 /// Mermer ve granit dikdörtgen tezgâh hesabı.
@@ -134,11 +139,13 @@ final class MarbleCountertopCalculator
         ),
     ];
 
-    PriceSummary? price;
-    if (lines.isNotEmpty) {
-      price = PriceSummary.fromLines(lines, vatPercent: vatRate);
-      addPriceSteps(steps, price);
-    }
+    final price = buildPriceSummary(
+      lines: lines,
+      steps: steps,
+      extras: input.extras,
+      vatPercent: vatRate,
+      discount: input.discount,
+    );
 
     return CalculationResult(figures: figures, price: price, steps: steps);
   }

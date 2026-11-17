@@ -13,6 +13,8 @@ final class Money implements Comparable<Money> {
 
   factory Money.fromKurus(int kurus) => Money._(BigInt.from(kurus));
 
+  factory Money.fromKurusBig(BigInt kurus) => Money._(kurus);
+
   /// [amount] TL cinsinden değerdir; kuruşa yarım yukarı (sıfırdan uzağa)
   /// yuvarlanır.
   factory Money.fromDecimal(Decimal amount) {
@@ -38,6 +40,11 @@ final class Money implements Comparable<Money> {
   );
 
   bool get isNegative => kurus.isNegative;
+
+  bool operator <(Money other) => kurus < other.kurus;
+  bool operator >(Money other) => kurus > other.kurus;
+  bool operator <=(Money other) => kurus <= other.kurus;
+  bool operator >=(Money other) => kurus >= other.kurus;
 
   /// Türkçe biçim: `₺1.250,50`
   String format({String symbol = '₺'}) {
