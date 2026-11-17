@@ -11,6 +11,7 @@ import '../../engine/measurement.dart';
 import '../costing/cost_items_section.dart';
 import '../costing/pricing_options.dart';
 import 'calculation_form.dart';
+import 'category_hub_page.dart';
 import 'widgets/number_field.dart';
 import 'widgets/result_card.dart';
 
@@ -136,6 +137,8 @@ class _CalculationPageState extends State<CalculationPage> {
               ],
               onChanged: _selectCategory,
             ),
+            if (CategoryHubPage.projectPageFor(_categoryId) != null)
+              _ProjectBanner(categoryId: _categoryId),
             if (!_category.isAvailable)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -234,6 +237,79 @@ class _CalculationPageState extends State<CalculationPage> {
             else
               ResultPlaceholder(message: message ?? 'Ölçüleri girin.'),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Hızlı hesapta, özel proje ekranı olan kategoriler için belirgin yönlendirme.
+/// Çok parçalı tezgâh ve PVC doğrama türleri yalnızca proje ekranlarındadır.
+class _ProjectBanner extends StatelessWidget {
+  const _ProjectBanner({required this.categoryId});
+
+  final String categoryId;
+
+  @override
+  Widget build(BuildContext context) {
+    final (title, subtitle, icon) = switch (categoryId) {
+      'marble_granite' => (
+        'Çok parçalı tezgâh projesi',
+        'Birden fazla parça, sakal/pah/rodaj, evye, ocak, montaj',
+        Icons.view_quilt_outlined,
+      ),
+      _ => (
+        'PVC doğrama projesi',
+        'Pencere · Kapı · Balkon kapısı — cam, profil, aksesuar',
+        Icons.window_outlined,
+      ),
+    };
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Material(
+        color: AppColors.gold.withValues(alpha: 0.14),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: AppColors.gold),
+        ),
+        child: InkWell(
+          key: const ValueKey('open_project'),
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => CategoryHubPage.projectPageFor(categoryId)!,
+            ),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Icon(icon, color: AppColors.gold, size: 32),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gold,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: const TextStyle(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.gold),
+              ],
+            ),
+          ),
         ),
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:decimal/decimal.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -99,6 +100,40 @@ class _MarbleProjectPageState extends State<MarbleProjectPage> {
     setState(() => _pieces = [..._pieces]..insert(i + 1, copy));
   }
 
+  void _deletePiece(CountertopPiece piece) {
+    final index = _pieces.indexWhere((p) => p.id == piece.id);
+    setState(
+      () => _pieces = [
+        for (final x in _pieces)
+          if (x.id != piece.id) x,
+      ],
+    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('"${piece.name}" silindi.'),
+          action: SnackBarAction(
+            label: 'Geri al',
+            onPressed: () => setState(
+              () =>
+                  _pieces = [..._pieces]
+                    ..insert(index.clamp(0, _pieces.length), piece),
+            ),
+          ),
+        ),
+      );
+  }
+
+  /// Kartta gösterilen parça alanı (m²); ölçü eksikse boş.
+  String _pieceArea(CountertopPiece p) {
+    if (p.length == null || p.depth == null) return '';
+    final area = (Length(p.length!, _unit) * Length(p.depth!, _unit)).times(
+      Decimal.fromInt(p.quantity),
+    );
+    return formatQuantity(area.squareMeters, 'm²', maxDecimals: 3);
+  }
+
   ({CalculationResult? result, String? message, Map<String, String> errors})
   _evaluate() {
     final errors = <String, String>{};
@@ -191,44 +226,65 @@ class _MarbleProjectPageState extends State<MarbleProjectPage> {
               value: _unit,
               onChanged: (u) => setState(() => _unit = u),
             ),
-            const SectionTitle(
-              'Tezgâh parçaları',
+            SectionTitle(
+              'Tezgâh parçaları (${_pieces.length})',
               subtitle:
                   'Tezgâh birden fazla parçadan oluşabilir (L tezgâh, ada, '
-                  'davlumbaz arası…). Her parçanın ölçüsü ve adedi ayrıdır.',
+                  'davlumbaz arası…). Her parçanın ölçüsü, adedi ve kenar '
+                  'işlemleri ayrıdır.',
             ),
-            for (final p in _pieces)
+            for (final (index, p) in _pieces.indexed)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Card(
                   key: ValueKey('piece_${p.id}'),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.only(left: 16, right: 4),
-                    title: Text(p.name),
-                    subtitle: Text(
-                      _pieceSummary(p),
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
-                    onTap: () => _editPiece(p),
-                    trailing: ItemActionsMenu(
-                      key: ValueKey('piece_menu_${p.id}'),
-                      onEdit: () => _editPiece(p),
-                      onCopy: () => _copyPiece(p),
-                      onDelete: () => setState(
-                        () => _pieces = [
-                          for (final x in _pieces)
-                            if (x.id != p.id) x,
-                        ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ListTile(
+                        contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        leading: CircleAvatar(
+                          radius: 16,
+                          backgroundColor: AppColors.gold.withValues(
+                            alpha: 0.18,
+                          ),
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(color: AppColors.gold),
+                          ),
+                        ),
+                        title: Text(p.name),
+                        subtitle: Text(
+                          _pieceSummary(p),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        trailing: Text(
+                          _pieceArea(p),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        onTap: () => _editPiece(p),
                       ),
-                    ),
+                      ItemActionsRow(
+                        keyPrefix: 'piece_${p.id}',
+                        onEdit: () => _editPiece(p),
+                        onCopy: () => _copyPiece(p),
+                        onDelete: () => _deletePiece(p),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            OutlinedButton.icon(
+            FilledButton.icon(
               key: const ValueKey('add_piece'),
               onPressed: _addPiece,
               icon: const Icon(Icons.add),
-              label: const Text('Parça ekle'),
+              label: Text(
+                _pieces.isEmpty
+                    ? 'İlk parçayı ekle'
+                    : 'Yeni parça ekle (${_pieces.length + 1}. parça)',
+              ),
             ),
             const SectionTitle(
               'Malzeme',

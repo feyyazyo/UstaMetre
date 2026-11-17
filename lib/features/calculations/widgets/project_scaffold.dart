@@ -65,31 +65,134 @@ class LengthUnitSelector extends StatelessWidget {
   );
 }
 
-/// Liste öğeleri için Düzenle / Kopyala / Sil menüsü.
-class ItemActionsMenu extends StatelessWidget {
-  const ItemActionsMenu({
+/// Liste öğeleri için her zaman görünen Düzenle / Kopyala / Sil butonları.
+///
+/// Gizli "⋮" menüsü yerine kullanılır; telefonda tek dokunuşla erişilir.
+/// Butonların anahtarları `<keyPrefix>_edit`, `_copy`, `_delete` olur.
+class ItemActionsRow extends StatelessWidget {
+  const ItemActionsRow({
     super.key,
+    required this.keyPrefix,
     required this.onEdit,
     required this.onCopy,
     required this.onDelete,
   });
 
+  final String keyPrefix;
   final VoidCallback onEdit;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
 
   @override
-  Widget build(BuildContext context) => PopupMenuButton<String>(
-    color: AppColors.card,
-    onSelected: (a) => switch (a) {
-      'edit' => onEdit(),
-      'copy' => onCopy(),
-      _ => onDelete(),
-    },
-    itemBuilder: (_) => const [
-      PopupMenuItem(value: 'edit', child: Text('Düzenle')),
-      PopupMenuItem(value: 'copy', child: Text('Kopyala')),
-      PopupMenuItem(value: 'delete', child: Text('Sil')),
-    ],
+  Widget build(BuildContext context) {
+    Widget action(
+      String suffix,
+      IconData icon,
+      String label,
+      VoidCallback f, {
+      Color? color,
+    }) => Expanded(
+      child: TextButton.icon(
+        key: ValueKey('${keyPrefix}_$suffix'),
+        style: TextButton.styleFrom(
+          foregroundColor: color ?? AppColors.gold,
+          minimumSize: const Size.fromHeight(48),
+        ),
+        onPressed: f,
+        icon: Icon(icon, size: 20),
+        label: Text(label),
+      ),
+    );
+    return Row(
+      children: [
+        action('edit', Icons.edit_outlined, 'Düzenle', onEdit),
+        action('copy', Icons.copy_outlined, 'Kopyala', onCopy),
+        action(
+          'delete',
+          Icons.delete_outline,
+          'Sil',
+          onDelete,
+          color: Theme.of(context).colorScheme.error,
+        ),
+      ],
+    );
+  }
+}
+
+/// Kaydedilmemiş değişiklikle çıkılmak istendiğinde sorar. `true` dönerse
+/// çıkılır.
+Future<bool> confirmDiscard(BuildContext context) async {
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      backgroundColor: AppColors.card,
+      title: const Text('Kaydedilmedi'),
+      content: const Text(
+        'Girdiğiniz bilgiler kaydedilmedi. Kaydetmeden çıkmak istiyor '
+        'musunuz?',
+      ),
+      actions: [
+        TextButton(
+          key: const ValueKey('discard_cancel'),
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Düzenlemeye dön'),
+        ),
+        TextButton(
+          key: const ValueKey('discard_confirm'),
+          onPressed: () => Navigator.pop(context, true),
+          child: const Text('Kaydetmeden çık'),
+        ),
+      ],
+    ),
   );
+  return result ?? false;
+}
+
+/// Tam ekran editörler için ortak iskelet:
+/// * Üst çubukta her zaman görünen **Kaydet** (klavye açıkken de erişilir)
+/// * Kaydedilmemiş değişiklik varken geri / X basılırsa onay sorulur
+class EditorScaffold extends StatelessWidget {
+  const EditorScaffold({
+    super.key,
+    required this.title,
+    required this.saveKey,
+    required this.onSave,
+    required this.isDirty,
+    required this.body,
+  });
+
+  final String title;
+  final String saveKey;
+  final VoidCallback onSave;
+  final bool isDirty;
+  final Widget body;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope<Object?>(
+      canPop: !isDirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final nav = Navigator.of(context);
+        if (await confirmDiscard(context)) nav.pop();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(title),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: FilledButton(
+                key: ValueKey('${saveKey}_top'),
+                style: FilledButton.styleFrom(minimumSize: const Size(88, 44)),
+                onPressed: onSave,
+                child: const Text('Kaydet'),
+              ),
+            ),
+          ],
+        ),
+        body: body,
+      ),
+    );
+  }
 }

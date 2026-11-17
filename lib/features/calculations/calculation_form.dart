@@ -26,7 +26,7 @@ enum CalcField {
 
 /// Hesaplama ekranında seçilebilen hesap türleri.
 enum CalcMode {
-  marbleCountertop('Tezgâh', null),
+  marbleCountertop('Tek parça tezgâh', null),
   length('Uzunluk', MeasurementType.length),
   area('Alan (m²)', MeasurementType.area),
   volume('Hacim (m³)', MeasurementType.volume),

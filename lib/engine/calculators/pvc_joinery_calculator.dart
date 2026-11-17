@@ -214,9 +214,6 @@ final class JoineryItem {
   final bool flyScreen;
   final Money? flyScreenPricePerUnit;
 
-  String labelAt(int index) =>
-      name.trim().isEmpty ? '${type.label} ${index + 1}' : name.trim();
-
   JoineryItem copyWith({
     JoineryType? type,
     String? name,
@@ -250,6 +247,20 @@ final class JoineryItem {
     flyScreen: flyScreen ?? this.flyScreen,
     flyScreenPricePerUnit: flyScreenPricePerUnit ?? this.flyScreenPricePerUnit,
   );
+}
+
+/// Kalemlerin görünen adları. Adsız kalemler tür bazında numaralanır
+/// ("Pencere 1", "Pencere 2", "Kapı 1"); adlı kalemlerde tür parantez içinde
+/// eklenir ("Salon (Balkon kapısı)"). Böylece tür her satırda görünür.
+List<String> joineryLabels(List<JoineryItem> items) {
+  final counters = <JoineryType, int>{};
+  return [
+    for (final item in items)
+      if (item.name.trim().isEmpty)
+        '${item.type.label} ${counters[item.type] = (counters[item.type] ?? 0) + 1}'
+      else
+        '${item.name.trim()} (${item.type.label})',
+  ];
 }
 
 final class PvcProjectInput {
@@ -313,8 +324,11 @@ final class PvcJoineryCalculator
     final profileFactor = percentFactor(profileWaste);
     final glassFactor = percentFactor(glassWaste);
 
+    final labels = joineryLabels(input.items);
+    final typeCount = <JoineryType, int>{};
+    final typeArea = <JoineryType, Decimal>{};
     for (final (index, item) in input.items.indexed) {
-      final label = item.labelAt(index);
+      final label = labels[index];
       requireQuantity(item.quantity);
       final w = requirePositiveLength(item.width, input.unit, '$label eni');
       final h = requirePositiveLength(item.height, input.unit, '$label boyu');
@@ -323,8 +337,10 @@ final class PvcJoineryCalculator
 
       final area = (w * h).times(q).squareMeters;
       totalArea += area;
+      typeCount[item.type] = (typeCount[item.type] ?? 0) + item.quantity;
+      typeArea[item.type] = (typeArea[item.type] ?? Decimal.zero) + area;
       steps.add(
-        '$label (${item.type.label}): ${m(w.meters)} × ${m(h.meters)}$qText '
+        '$label: ${m(w.meters)} × ${m(h.meters)}$qText '
         '= ${m(area, 'm²')}',
       );
 
@@ -482,6 +498,13 @@ final class PvcJoineryCalculator
         unit: 'm²',
         highlighted: true,
       ),
+      for (final type in JoineryType.values)
+        if (typeCount[type] case final count?)
+          ResultFigure(
+            label: '${type.label} ($count adet)',
+            value: typeArea[type]!,
+            unit: 'm²',
+          ),
       if (totalGlass > Decimal.zero)
         ResultFigure(
           label: glassWaste > Decimal.zero

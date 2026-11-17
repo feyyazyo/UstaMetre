@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:ustametre/engine/calculators/pvc_joinery_calculator.dart';
 import 'package:ustametre/engine/money.dart';
+import 'package:ustametre/features/calculations/pvc/joinery_item_editor_page.dart';
 import 'package:ustametre/features/calculations/pvc/pvc_project_page.dart';
 
 import '../helpers.dart';
@@ -53,7 +54,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Doğrama ekle
-    await tapKey(tester, 'add_joinery');
+    await tapKey(tester, 'add_window');
     await fill(tester, 'j_width', '120');
     await fill(tester, 'j_height', '150');
     await fill(tester, 'j_quantity', '2');
@@ -73,7 +74,7 @@ void main() {
     expect(find.textContaining('doğrulanmamış'), findsOneWidget);
 
     // Ölçülen cam alanını gir → cam kesinleşir, uyarı kalkar
-    await tapKey(tester, 'joinery_t2', up: true);
+    await tapKey(tester, 'joinery_t2_edit', up: true);
     await fill(tester, 'j_glassArea', '1,45');
     await tapKey(tester, 'j_save');
     expect(bar('₺12.219,60'), findsOneWidget); // cam 2,9 m² × 950 = 2.755
@@ -88,8 +89,7 @@ void main() {
 
   testWidgets('manuel profil, kopyala, sil', (tester) async {
     await pumpScreen(tester, const PvcProjectPage());
-    await tapKey(tester, 'add_joinery');
-    await tapKey(tester, 'j_type_door');
+    await tapKey(tester, 'add_door');
     await fill(tester, 'j_width', '90');
     await fill(tester, 'j_height', '210');
     await chooseDropdown(tester, 'j_profileMode', 'Manuel metraj');
@@ -102,20 +102,16 @@ void main() {
     await enterKey(tester, 'field_profileWaste', '10');
     expect(bar('₺1.584,00'), findsOneWidget);
 
-    await tapKey(tester, 'joinery_menu_t1', up: true);
-    await tester.tap(find.text('Kopyala').last);
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'joinery_t1_copy', up: true);
     expect(bar('₺3.168,00'), findsOneWidget);
 
-    await tapKey(tester, 'joinery_menu_t2', up: true);
-    await tester.tap(find.text('Sil').last);
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'joinery_t2_delete', up: true);
     expect(bar('₺1.584,00'), findsOneWidget);
   });
 
   testWidgets('boş ölçüyle doğrama kaydedilemez', (tester) async {
     await pumpScreen(tester, const PvcProjectPage());
-    await tapKey(tester, 'add_joinery');
+    await tapKey(tester, 'add_window');
     await tapKey(tester, 'j_save');
     expect(
       tester.widget<Text>(find.byKey(const ValueKey('j_error'))).data,
@@ -142,7 +138,7 @@ void main() {
     final recipe = catalog.newRecipe().copyWith(name: 'Eski reçete');
     await catalog.saveRecipe(recipe);
     await pumpScreen(tester, const PvcProjectPage(), catalog: catalog);
-    await tapKey(tester, 'add_joinery');
+    await tapKey(tester, 'add_window');
     await fill(tester, 'j_width', '100');
     await fill(tester, 'j_height', '100');
     await chooseDropdown(tester, 'j_profileMode', 'Profil reçetesi');
@@ -153,13 +149,13 @@ void main() {
     await tester.pumpAndSettle();
     // Kayıtlı kopya ile hesap sürer; düzenleme ekranı açılabilmeli.
     expect(find.textContaining('Eski reçete'), findsWidgets);
-    await tapKey(tester, 'joinery_t2', up: true);
+    await tapKey(tester, 'joinery_t2_edit', up: true);
     expect(tester.takeException(), isNull);
-    expect(find.text('Doğrama kalemi'), findsOneWidget);
+    expect(find.byType(JoineryItemEditorPage), findsOneWidget);
     await reveal(tester, 'j_recipe');
     expect(find.textContaining('silinmiş'), findsOneWidget);
     await tapKey(tester, 'j_save');
-    expect(find.text('Doğrama kalemi'), findsNothing);
+    expect(find.byType(JoineryItemEditorPage), findsNothing);
   });
 
   test('reçete bileşeni formül metni', () {

@@ -65,16 +65,12 @@ void main() {
     );
 
     // Yan tezgâhı (t2) kopyala: alan, uzunluk ve sakal artar.
-    await tapKey(tester, 'piece_menu_t2', up: true);
-    await tester.tap(find.text('Kopyala').last);
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'piece_t2_copy', up: true);
     expect(find.text('Yan tezgâh (kopya)'), findsOneWidget);
     expect(bar('₺18.506,59'), findsOneWidget);
 
     // Kopyayı (t3) sil → önceki toplam
-    await tapKey(tester, 'piece_menu_t3');
-    await tester.tap(find.text('Sil').last);
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'piece_t3_delete');
     expect(find.text('Yan tezgâh (kopya)'), findsNothing);
     expect(bar('₺13.951,54'), findsOneWidget);
   });

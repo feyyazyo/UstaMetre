@@ -15,6 +15,7 @@ import '../widgets/number_field.dart';
 import '../widgets/project_scaffold.dart';
 import '../widgets/result_card.dart';
 import 'joinery_item_editor_page.dart';
+import 'joinery_type_picker.dart';
 import 'recipe_pages.dart';
 
 /// PVC kapı ve pencere doğrama projesi.
@@ -67,15 +68,16 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
       },
   ];
 
-  Future<void> _edit(JoineryItem? existing) async {
+  Future<void> _edit(
+    JoineryItem? existing, {
+    JoineryType type = JoineryType.window,
+  }) async {
     final catalog = CatalogScope.of(context);
     final item = await showJoineryItemEditor(
       context,
       unit: _unit,
       recipes: catalog.recipes,
-      initial:
-          existing ??
-          JoineryItem(id: catalog.ids.next(), type: JoineryType.window),
+      initial: existing ?? JoineryItem(id: catalog.ids.next(), type: type),
     );
     if (item == null) return;
     setState(() {
@@ -105,6 +107,32 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
     setState(() => _items = [..._items]..insert(i + 1, copy));
   }
 
+  void _delete(JoineryItem item) {
+    final index = _items.indexWhere((x) => x.id == item.id);
+    final label = joineryLabels(_items)[index];
+    setState(
+      () => _items = [
+        for (final x in _items)
+          if (x.id != item.id) x,
+      ],
+    );
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text('"$label" silindi.'),
+          action: SnackBarAction(
+            label: 'Geri al',
+            onPressed: () => setState(
+              () =>
+                  _items = [..._items]
+                    ..insert(index.clamp(0, _items.length), item),
+            ),
+          ),
+        ),
+      );
+  }
+
   String _summary(JoineryItem item) {
     final parts = <String>[
       '${formatDecimal(item.width!)} × ${formatDecimal(item.height!)} '
@@ -124,6 +152,7 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
   @override
   Widget build(BuildContext context) {
     final catalog = CatalogScope.of(context);
+    final labels = joineryLabels(_items);
     final profileWaste = parseField(_profileWaste.text);
     final glassWaste = parseField(_glassWaste.text);
     CalculationResult? result;
@@ -151,7 +180,7 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PVC doğrama projesi'),
+        title: const Text('PVC doğrama'),
         actions: [
           TextButton.icon(
             key: const ValueKey('open_recipes'),
@@ -174,45 +203,61 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
               value: _unit,
               onChanged: (u) => setState(() => _unit = u),
             ),
-            const SectionTitle(
-              'Doğrama kalemleri',
+            SectionTitle(
+              'Doğrama kalemleri (${_items.length})',
               subtitle:
                   'Pencere, kapı ve balkon kapısı; her kalem ayrı ölçü, '
                   'adet, cam, profil ve aksesuar taşır.',
             ),
-            for (final item in _items)
+            for (final (index, item) in _items.indexed)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Card(
                   key: ValueKey('joinery_${item.id}'),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.only(left: 16, right: 4),
-                    title: Text(item.labelAt(_items.indexOf(item))),
-                    subtitle: Text(
-                      _summary(item),
-                      style: const TextStyle(color: AppColors.textSecondary),
-                    ),
-                    onTap: () => _edit(item),
-                    trailing: ItemActionsMenu(
-                      key: ValueKey('joinery_menu_${item.id}'),
-                      onEdit: () => _edit(item),
-                      onCopy: () => _copy(item),
-                      onDelete: () => setState(
-                        () => _items = [
-                          for (final x in _items)
-                            if (x.id != item.id) x,
-                        ],
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ListTile(
+                        contentPadding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        leading: Icon(joineryIcon(item.type), size: 30),
+                        title: Text(labels[index]),
+                        subtitle: Text(
+                          _summary(item),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                        onTap: () => _edit(item),
                       ),
-                    ),
+                      ItemActionsRow(
+                        keyPrefix: 'joinery_${item.id}',
+                        onEdit: () => _edit(item),
+                        onCopy: () => _copy(item),
+                        onDelete: () => _delete(item),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            OutlinedButton.icon(
-              key: const ValueKey('add_joinery'),
-              onPressed: () => _edit(null),
-              icon: const Icon(Icons.add),
-              label: const Text('Doğrama ekle'),
+            Text(
+              _items.isEmpty ? 'İlk doğramayı ekleyin:' : 'Yeni doğrama ekle:',
+              style: const TextStyle(color: AppColors.textSecondary),
             ),
+            const SizedBox(height: 8),
+            for (final t in JoineryType.values)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: OutlinedButton.icon(
+                  key: ValueKey('add_${t.name}'),
+                  style: OutlinedButton.styleFrom(
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                  ),
+                  onPressed: () => _edit(null, type: t),
+                  icon: Icon(joineryIcon(t)),
+                  label: Text('${t.label} ekle'),
+                ),
+              ),
             const SectionTitle(
               'Fire',
               subtitle:

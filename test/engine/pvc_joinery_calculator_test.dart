@@ -60,11 +60,78 @@ void main() {
       // 1,2 × 1,5 × 2 = 3,6 + 0,9 × 2,2 = 1,98
       expect(fig(r, 'Toplam doğrama alanı'), d('5.58'));
       expect(r.price, isNull);
+      expect(r.steps.first, 'Pencere 1: 1,2 m × 1,5 m × 2 adet = 3,6 m²');
       expect(
-        r.steps.first,
-        'Pencere 1 (Pencere): 1,2 m × 1,5 m × 2 adet = 3,6 m²',
+        r.steps[1],
+        startsWith('Salon balkon kapısı (Balkon kapısı): 0,9 m × 2,2 m'),
       );
-      expect(r.steps[1], startsWith('Salon balkon kapısı (Balkon kapısı)'));
+    });
+  });
+
+  group('Doğrama türü', () {
+    test('tür bazında numaralama ve adlı kalemde tür etiketi', () {
+      final labels = joineryLabels([
+        window,
+        JoineryItem(id: 'd', type: JoineryType.door),
+        window,
+        balcony,
+      ]);
+      expect(labels, [
+        'Pencere 1',
+        'Kapı 1',
+        'Pencere 2',
+        'Salon balkon kapısı (Balkon kapısı)',
+      ]);
+    });
+
+    test('her tür için adet ve alan ayrı gösterilir', () {
+      final r = calc.calculate(
+        PvcProjectInput(
+          items: [
+            window,
+            JoineryItem(
+              id: 'd',
+              type: JoineryType.door,
+              width: d('90'),
+              height: d('210'),
+            ),
+            balcony,
+          ],
+        ),
+      );
+      expect(fig(r, 'Pencere (2 adet)'), d('3.6'));
+      expect(fig(r, 'Kapı (1 adet)'), d('1.89'));
+      expect(fig(r, 'Balkon kapısı (1 adet)'), d('1.98'));
+      expect(fig(r, 'Toplam doğrama alanı'), d('7.47'));
+    });
+
+    test('tür değişince etiketler ve tür toplamları güncellenir', () {
+      final asWindow = calc.calculate(
+        PvcProjectInput(
+          items: [window.copyWith(glassPricePerSquareMeter: tl('100'))],
+        ),
+      );
+      final asBalcony = calc.calculate(
+        PvcProjectInput(
+          items: [
+            window.copyWith(
+              type: JoineryType.balconyDoor,
+              glassPricePerSquareMeter: tl('100'),
+            ),
+          ],
+        ),
+      );
+      expect(asWindow.price!.lines.single.label, 'Pencere 1 – Cam');
+      expect(asBalcony.price!.lines.single.label, 'Balkon kapısı 1 – Cam');
+      expect(fig(asBalcony, 'Balkon kapısı (2 adet)'), d('3.6'));
+      expect(
+        asBalcony.figures.where((f) => f.label.startsWith('Pencere')),
+        isEmpty,
+      );
+      // Ölçüye bağlı tutar türden bağımsızdır (aynı ölçü → aynı cam).
+      expect(asBalcony.price!.subtotal, asWindow.price!.subtotal);
+      // Tür, PDF/kayıt için dışa aktarılan veride de görünür.
+      expect(asBalcony.toJson().toString(), contains('Balkon kapısı'));
     });
   });
 

@@ -5,6 +5,7 @@ import '../../../engine/calculators/marble_project_calculator.dart';
 import '../../../engine/measurement.dart';
 import '../../../shared/input_parsing.dart';
 import '../widgets/number_field.dart';
+import '../widgets/project_scaffold.dart';
 
 /// Tezgâh parçası ekleme/düzenleme. Kaydedilirse parçayı döner.
 Future<CountertopPiece?> showPieceEditor(
@@ -45,7 +46,7 @@ class _PieceEditorPageState extends State<PieceEditorPage> {
   @override
   void initState() {
     super.initState();
-    for (final c in [_length, _depth, _quantity]) {
+    for (final c in [_name, _length, _depth, _quantity]) {
       c.addListener(() => setState(() {}));
     }
   }
@@ -67,8 +68,40 @@ class _PieceEditorPageState extends State<PieceEditorPage> {
         f.error ?? (_submitted && f.value == null ? 'Bu alan gerekli' : null);
     final u = widget.unit.symbol;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tezgâh parçası')),
+    void save() {
+      // Değerler kaydetme anında yeniden okunur (son yazılan karakter dahil).
+      final length = parseField(_length.text);
+      final depth = parseField(_depth.text);
+      final quantity = parseCountField(_quantity.text);
+      setState(() => _submitted = true);
+      if (length.value == null ||
+          depth.value == null ||
+          quantity.value == null) {
+        return;
+      }
+      Navigator.of(context).pop(
+        _piece.copyWith(
+          name: _name.text.trim(),
+          length: length.value,
+          depth: depth.value,
+          quantity: quantity.value,
+        ),
+      );
+    }
+
+    final i = widget.initial;
+    final dirty =
+        _name.text != i.name ||
+        _length.text != decimalToInput(i.length) ||
+        _depth.text != decimalToInput(i.depth) ||
+        _quantity.text != '${i.quantity}' ||
+        !_sameEdges(_piece, i);
+
+    return EditorScaffold(
+      title: 'Tezgâh parçası',
+      saveKey: 'piece_save',
+      onSave: save,
+      isDirty: dirty,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
@@ -162,26 +195,19 @@ class _PieceEditorPageState extends State<PieceEditorPage> {
           const SizedBox(height: 24),
           FilledButton(
             key: const ValueKey('piece_save'),
-            onPressed: () {
-              setState(() => _submitted = true);
-              if (length.value == null ||
-                  depth.value == null ||
-                  quantity.value == null) {
-                return;
-              }
-              Navigator.of(context).pop(
-                _piece.copyWith(
-                  name: _name.text.trim(),
-                  length: length.value,
-                  depth: depth.value,
-                  quantity: quantity.value,
-                ),
-              );
-            },
+            onPressed: save,
             child: const Text('Kaydet'),
           ),
         ],
       ),
     );
   }
+}
+
+bool _sameEdges(CountertopPiece a, CountertopPiece b) {
+  for (final op in EdgeOperation.values) {
+    final x = a.edgesFor(op), y = b.edgesFor(op);
+    if (x.length != y.length || !x.containsAll(y)) return false;
+  }
+  return true;
 }

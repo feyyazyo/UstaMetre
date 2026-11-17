@@ -5,6 +5,8 @@ import '../../../engine/calculators/pvc_joinery_calculator.dart';
 import '../../../engine/measurement.dart';
 import '../../../shared/input_parsing.dart';
 import '../widgets/number_field.dart';
+import '../widgets/project_scaffold.dart';
+import 'joinery_type_picker.dart';
 
 enum _ProfileMode {
   none('Profil yok'),
@@ -113,9 +115,16 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
     _flyScreenPrice,
   ];
 
+  late final _initialProfileMode = _profileMode;
+  late final _initialRecipeId = _recipeId;
+  late final List<(TextEditingController, String)> _initialTexts = [
+    for (final c in _all) (c, c.text),
+  ];
+
   @override
   void initState() {
     super.initState();
+    _initialTexts; // başlangıç değerlerini sabitle
     for (final c in _all) {
       c.addListener(() => setState(() {}));
     }
@@ -251,28 +260,33 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
       errorText: e[key],
     );
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Doğrama kalemi')),
+    void save() {
+      setState(() => _submitted = true);
+      final item = _build().item;
+      if (item != null) Navigator.of(context).pop(item);
+    }
+
+    final dirty =
+        _type != _i.type ||
+        _flyScreen != _i.flyScreen ||
+        _profileMode != _initialProfileMode ||
+        _recipeId != _initialRecipeId ||
+        [for (final (c, initial) in _initialTexts) c.text != initial]
+            .any((changed) => changed);
+
+    return EditorScaffold(
+      title: _type.label,
+      saveKey: 'j_save',
+      onSave: save,
+      isDirty: dirty,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          SegmentedButton<JoineryType>(
-            key: const ValueKey('j_type'),
-            showSelectedIcon: false,
-            style: SegmentedButton.styleFrom(
-              minimumSize: const Size.fromHeight(52),
-              selectedBackgroundColor: AppColors.gold,
-              selectedForegroundColor: AppColors.onGold,
-            ),
-            segments: [
-              for (final t in JoineryType.values)
-                ButtonSegment(
-                  value: t,
-                  label: Text(t.label, key: ValueKey('j_type_${t.name}')),
-                ),
-            ],
-            selected: {_type},
-            onSelectionChanged: (s) => setState(() => _type = s.first),
+          Text('Doğrama türü', style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 8),
+          JoineryTypePicker(
+            value: _type,
+            onChanged: (t) => setState(() => _type = t),
           ),
           gap(),
           TextField(
@@ -411,11 +425,7 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
           const SizedBox(height: 24),
           FilledButton(
             key: const ValueKey('j_save'),
-            onPressed: () {
-              setState(() => _submitted = true);
-              final item = _build().item;
-              if (item != null) Navigator.of(context).pop(item);
-            },
+            onPressed: save,
             child: const Text('Kaydet'),
           ),
         ],

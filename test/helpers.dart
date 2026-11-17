@@ -98,3 +98,23 @@ Future<void> tapInSheet(WidgetTester tester, String key) async {
   await tester.tap(tile);
   await tester.pumpAndSettle();
 }
+
+/// Metni bulana kadar listeyi (önce yukarı, sonra aşağı) kaydırır.
+Future<Finder> revealText(WidgetTester tester, String text) async {
+  final finder = find.text(text);
+  if (finder.evaluate().isEmpty) {
+    Future<void> scroll(double delta) => tester.scrollUntilVisible(
+      finder,
+      delta,
+      scrollable: firstScrollable,
+      maxScrolls: 60,
+    );
+    try {
+      await scroll(-150);
+    } on StateError {
+      await scroll(150);
+    }
+  }
+  await tester.pumpAndSettle();
+  return finder;
+}
