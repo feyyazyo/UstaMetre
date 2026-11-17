@@ -45,8 +45,11 @@ void main() {
     expect(ids.toSet(), hasLength(12));
   });
 
-  test('Sprint 1: hiçbir kategori tamamlanmış olarak işaretlenmemiş', () {
-    // Bir kategori arayüze bağlanıp test edildiğinde bu test güncellenmelidir.
-    expect(TradeCategories.all.where((c) => c.isAvailable), isEmpty);
+  test('Sprint 2: yalnızca mermer ve granit özel hesaplı olarak işaretli', () {
+    // Bir kategorinin özel hesapları arayüze bağlanıp test edildiğinde bu
+    // test güncellenmelidir.
+    expect(TradeCategories.all.where((c) => c.isAvailable).map((c) => c.id), [
+      'marble_granite',
+    ]);
   });
 }

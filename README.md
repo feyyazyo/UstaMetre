@@ -6,16 +6,29 @@ Tüm meslek grupları için ölçüm, hesaplama ve fiyat teklifi hazırlama uygu
 Flutter ile geliştirilir, öncelikli platform Android'dir. Arayüz Türkçedir ve
 uygulama çevrimdışı (offline-first) çalışacak şekilde tasarlanmıştır.
 
-## Durum (Sprint 1)
+## Durum (Sprint 2)
 
 | Alan | Durum |
 |---|---|
 | Proje iskeleti, tema, alt gezinme (5 ekran) | ✅ |
-| Ana sayfa ve 4 kısayol (Yeni Hesaplama, Yeni Proje, Yeni Teklif, Müşteriler) | ✅ (kısayollar ilgili ekranlara gider) |
-| 12 meslek kategorisi | 🟡 Mimari olarak tanımlı, hesaplamalar **henüz yok** (arayüzde "Yakında") |
-| Hesaplama motoru temeli (kesin ondalık para/ölçü, dikdörtgen alan hesaplayıcı) | ✅ Birim testli, arayüze henüz bağlı değil |
+| Ana sayfa ve 4 kısayol | ✅ Yeni Hesaplama doğrudan hesap ekranını açar |
+| Hesaplama ekranı: meslek seçimi, mm/cm/m, fire, birim fiyat, KDV, anlık sonuç, "Nasıl hesaplandı?" | ✅ |
+| Genel hesap türleri: uzunluk, alan, hacim, metre tül, çevre, adet, manuel | ✅ Tüm kategorilerde kullanılabilir |
+| Mermer ve granit: tezgâh m², fireli m², metre tül, malzeme + işçilik, KDV | ✅ Özel hesap |
+| Diğer 11 kategorinin mesleğe özel hesapları | ⏳ Henüz yok (arayüzde "Genel hesap") |
 | Proje / teklif / müşteri kaydı, yerel veritabanı | ⏳ Sonraki sprintler |
 | GitHub Actions: analyze, test, APK artifact | ✅ |
+
+### Hesap kuralları
+
+- Ölçüler seçilen birimden (mm/cm/m) metreye kesin olarak çevrilir.
+- Fire net miktara yüzde olarak eklenir; **adet** hesabında fireli miktar yukarı
+  tam sayıya yuvarlanır.
+- Satır tutarı = fireli miktar × birim fiyat, kuruşa yarım yukarı yuvarlanır.
+- KDV, kuruşa yuvarlanmış ara toplam üzerinden hesaplanır; genel toplam = ara
+  toplam + KDV (kuruşu kuruşuna tutar).
+- Mermer tezgâhta malzeme **fireli m²** üzerinden, işçilik **metre tül**
+  (uzunluk × adet) üzerinden fiyatlanır.
 
 ## Klasör yapısı
 
@@ -32,7 +45,10 @@ lib/
 │   ├── money.dart            # Kuruş hassasiyetli para (BigInt)
 │   ├── measurement.dart      # Uzunluk / alan (Decimal)
 │   ├── number_parser.dart    # "1.250,75" gibi Türkçe sayı girişi
-│   └── calculators/          # Somut hesaplayıcılar
+│   ├── number_format.dart    # Türkçe sayı/miktar biçimi
+│   ├── pricing.dart          # Maliyet satırları, ara toplam, KDV
+│   ├── calculation_result.dart
+│   └── calculators/          # Genel ölçü, mermer tezgâh, dikdörtgen alan
 ├── features/                 # Ekranlar (özellik bazlı)
 │   ├── home/  calculations/  projects/  quotes/  customers/  settings/
 └── shared/widgets/           # Ortak arayüz bileşenleri

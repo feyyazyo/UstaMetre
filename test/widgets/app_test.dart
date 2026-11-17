@@ -4,6 +4,7 @@ import 'package:ustametre/app/app.dart';
 import 'package:ustametre/core/constants/app_strings.dart';
 import 'package:ustametre/core/theme/app_colors.dart';
 import 'package:ustametre/domain/trade_category.dart';
+import 'package:ustametre/features/calculations/calculation_page.dart';
 import 'package:ustametre/features/calculations/calculations_page.dart';
 import 'package:ustametre/features/customers/customers_page.dart';
 import 'package:ustametre/features/projects/projects_page.dart';
@@ -80,10 +81,10 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('shortcut_new_calculation')));
     await tester.pumpAndSettle();
-    expect(find.byType(CalculationsPage).hitTestable(), findsOneWidget);
-
-    await tester.tap(navItem(AppStrings.navHome));
+    expect(find.byType(CalculationPage), findsOneWidget);
+    await tester.pageBack();
     await tester.pumpAndSettle();
+
     await tester.tap(find.byKey(const ValueKey('shortcut_new_project')));
     await tester.pumpAndSettle();
     expect(find.byType(ProjectsPage).hitTestable(), findsOneWidget);
@@ -101,29 +102,33 @@ void main() {
     expect(find.byType(CustomersPage), findsOneWidget);
   });
 
-  testWidgets('hesaplamalar ekranı 12 kategoriyi "Yakında" olarak listeler', (
-    tester,
-  ) async {
-    await pumpApp(tester);
-    await tester.tap(navItem(AppStrings.navCalculations));
-    await tester.pumpAndSettle();
+  testWidgets(
+    'hesaplamalar ekranı 12 kategoriyi özel/genel etiketiyle listeler',
+    (tester) async {
+      await pumpApp(tester);
+      await tester.tap(navItem(AppStrings.navCalculations));
+      await tester.pumpAndSettle();
 
-    final list = find.descendant(
-      of: find.byType(CalculationsPage),
-      matching: find.byType(Scrollable),
-    );
-    for (final category in TradeCategories.all) {
-      final tile = find.byKey(ValueKey('category_${category.id}'));
-      await tester.scrollUntilVisible(tile, 200, scrollable: list.first);
-      expect(find.text(category.name), findsOneWidget);
-      expect(
-        find.descendant(of: tile, matching: find.text(AppStrings.comingSoon)),
-        findsOneWidget,
+      final list = find.descendant(
+        of: find.byType(CalculationsPage),
+        matching: find.byType(Scrollable),
       );
-    }
-  });
+      for (final category in TradeCategories.all) {
+        final tile = find.byKey(ValueKey('category_${category.id}'));
+        await tester.scrollUntilVisible(tile, 200, scrollable: list.first);
+        expect(find.text(category.name), findsOneWidget);
+        final label = category.isAvailable
+            ? AppStrings.specialCalculations
+            : AppStrings.genericCalculations;
+        expect(
+          find.descendant(of: tile, matching: find.text(label)),
+          findsOneWidget,
+        );
+      }
+    },
+  );
 
-  testWidgets('henüz hazır olmayan kategoriye dokununca bilgi verilir', (
+  testWidgets('kategoriye dokununca o kategoriyle hesaplama ekranı açılır', (
     tester,
   ) async {
     await pumpApp(tester);
@@ -131,9 +136,21 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Mermer ve granit'));
-    await tester.pump();
-    expect(find.byType(SnackBar), findsOneWidget);
-    expect(find.textContaining(AppStrings.comingSoonMessage), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.byType(CalculationPage), findsOneWidget);
+    expect(find.byKey(const ValueKey('mode_marbleCountertop')), findsOneWidget);
+    expect(find.byKey(const ValueKey('generic_only_note')), findsNothing);
+  });
+
+  testWidgets('hesaplamalar sekmesindeki buton yeni hesaplama açar', (
+    tester,
+  ) async {
+    await pumpApp(tester);
+    await tester.tap(navItem(AppStrings.navCalculations));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('start_calculation')));
+    await tester.pumpAndSettle();
+    expect(find.byType(CalculationPage), findsOneWidget);
   });
 
   testWidgets('kısayol kartları rahat dokunma boyutunda', (tester) async {

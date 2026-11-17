@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_colors.dart';
-import '../../domain/trade_category.dart';
 import '../../shared/widgets/coming_soon.dart';
 import '../../shared/widgets/status_badge.dart';
 
@@ -21,7 +20,7 @@ class SettingsPage extends StatelessWidget {
           subtitle,
           style: const TextStyle(color: AppColors.textSecondary),
         ),
-        trailing: const StatusBadge(status: ModuleStatus.planned),
+        trailing: const StatusBadge(label: AppStrings.comingSoon),
         onTap: () => showComingSoon(context, title),
       ),
     );

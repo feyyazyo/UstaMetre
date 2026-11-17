@@ -92,8 +92,8 @@ class HomePage extends StatelessWidget {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '${TradeCategories.all.length} meslek grubu planlandı'
-                        ' · $readyCount hazır',
+                        '${TradeCategories.all.length} meslek grubu · '
+                        '$readyCount grupta özel hesap hazır',
                         style: textTheme.bodyMedium?.copyWith(
                           color: AppColors.textSecondary,
                         ),
