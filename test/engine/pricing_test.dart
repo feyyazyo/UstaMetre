@@ -195,4 +195,9 @@ void main() {
       expect(json['grandTotalKurus'], '10800');
     });
   });
+
+  test('indirim açıklaması Türkçe yüzde biçiminde', () {
+    expect(PercentDiscount(d('7.5')).description, '%7,5');
+    expect(AmountDiscount(tl('1250.5')).description, '₺1.250,50');
+  });
 }

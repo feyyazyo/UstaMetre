@@ -2,6 +2,7 @@ import 'package:decimal/decimal.dart';
 
 import 'calculator.dart';
 import 'money.dart';
+import 'number_format.dart';
 
 /// Maliyet kaleminin kategorisi.
 enum CostKind {
@@ -74,7 +75,7 @@ final class PercentDiscount extends Discount {
   Money amountFor(Money subtotal) => subtotal.percent(percent);
 
   @override
-  String get description => '%$percent';
+  String get description => formatPercent(percent);
 }
 
 /// Sabit tutarlı indirim (ör. ₺500).

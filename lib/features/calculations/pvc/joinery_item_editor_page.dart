@@ -74,9 +74,21 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
         ? moneyToInput((_i.profile! as ManualProfile).pricePerMeter)
         : '',
   );
+
+  /// Seçilebilir reçeteler. Kalemin kendi reçetesi katalogdan silinmişse
+  /// kayıtlı kopyası "(silinmiş)" olarak listede kalır.
+  late final List<ProfileRecipe> _recipes = [
+    ...widget.recipes,
+    if (_i.profile case RecipeProfile(:final recipe)
+        when !widget.recipes.any((r) => r.id == recipe.id))
+      recipe,
+  ];
+
+  bool _isDeleted(ProfileRecipe r) => !widget.recipes.any((x) => x.id == r.id);
+
   late String? _recipeId = switch (_i.profile) {
     RecipeProfile(:final recipe) => recipe.id,
-    _ => widget.recipes.isEmpty ? null : widget.recipes.first.id,
+    _ => _recipes.isEmpty ? null : _recipes.first.id,
   };
   late final _accessory = TextEditingController(
     text: moneyToInput(_i.accessoryPricePerUnit),
@@ -158,9 +170,7 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
           profile = ManualProfile(metersPerUnit: meters, pricePerMeter: price);
         }
       case _ProfileMode.recipe:
-        final recipe = widget.recipes
-            .where((r) => r.id == _recipeId)
-            .firstOrNull;
+        final recipe = _recipes.where((r) => r.id == _recipeId).firstOrNull;
         if (recipe == null) {
           if (_submitted) errors['recipe'] = 'Bir reçete seçin';
         } else {
@@ -335,7 +345,7 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
           ],
           if (_profileMode == _ProfileMode.recipe) ...[
             gap(),
-            if (widget.recipes.isEmpty)
+            if (_recipes.isEmpty)
               Text(
                 'Henüz profil reçetesi yok. Doğrama ekranındaki "Profil '
                 'reçeteleri" bölümünden oluşturabilirsiniz.',
@@ -353,11 +363,13 @@ class _JoineryItemEditorPageState extends State<JoineryItemEditorPage> {
                   errorText: e['recipe'],
                 ),
                 items: [
-                  for (final r in widget.recipes)
+                  for (final r in _recipes)
                     DropdownMenuItem(
                       value: r.id,
                       child: Text(
-                        '${r.name}${r.verified ? '' : ' (doğrulanmamış)'}',
+                        '${r.name}${r.verified ? '' : ' (doğrulanmamış)'}'
+                        '${_isDeleted(r) ? ' (silinmiş)' : ''}',
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                 ],

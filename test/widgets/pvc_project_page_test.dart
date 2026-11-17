@@ -137,6 +137,31 @@ void main() {
     expect(catalog.recipes, isEmpty);
   });
 
+  testWidgets('reçetesi silinmiş doğrama düzenlenebilir', (tester) async {
+    final catalog = testCatalog();
+    final recipe = catalog.newRecipe().copyWith(name: 'Eski reçete');
+    await catalog.saveRecipe(recipe);
+    await pumpScreen(tester, const PvcProjectPage(), catalog: catalog);
+    await tapKey(tester, 'add_joinery');
+    await fill(tester, 'j_width', '100');
+    await fill(tester, 'j_height', '100');
+    await chooseDropdown(tester, 'j_profileMode', 'Profil reçetesi');
+    await tapKey(tester, 'j_save');
+    expect(find.text('Pencere 1'), findsOneWidget);
+
+    await catalog.deleteRecipe(recipe.id);
+    await tester.pumpAndSettle();
+    // Kayıtlı kopya ile hesap sürer; düzenleme ekranı açılabilmeli.
+    expect(find.textContaining('Eski reçete'), findsWidgets);
+    await tapKey(tester, 'joinery_t2', up: true);
+    expect(tester.takeException(), isNull);
+    expect(find.text('Doğrama kalemi'), findsOneWidget);
+    await reveal(tester, 'j_recipe');
+    expect(find.textContaining('silinmiş'), findsOneWidget);
+    await tapKey(tester, 'j_save');
+    expect(find.text('Doğrama kalemi'), findsNothing);
+  });
+
   test('reçete bileşeni formül metni', () {
     final c = ProfileComponent(
       name: 'Çıta',
