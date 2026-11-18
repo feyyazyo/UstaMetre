@@ -3,7 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/catalog_scope.dart';
+import '../../../domain/records/saved_calculation.dart';
 import '../../../engine/calculation_result.dart';
+import '../../records/save_calculation_page.dart';
 import '../../../engine/calculator.dart';
 import '../../../engine/calculators/marble_project_calculator.dart';
 import '../../../engine/costing/cost_sheet.dart';
@@ -21,7 +23,11 @@ import 'piece_editor_page.dart';
 /// Mermer ve granit tezgâh projesi: çok parçalı tezgâh, kenar işlemleri,
 /// bağımsız malzeme / fire / işçilik, ek kalemler, indirim ve KDV.
 class MarbleProjectPage extends StatefulWidget {
-  const MarbleProjectPage({super.key});
+  const MarbleProjectPage({super.key, this.editing, this.presetProjectId});
+
+  /// Kayıtlı hesabı düzenlemek için açıldıysa o hesap.
+  final SavedCalculation? editing;
+  final String? presetProjectId;
 
   @override
   State<MarbleProjectPage> createState() => _MarbleProjectPageState();
@@ -46,13 +52,65 @@ class _MarbleProjectPageState extends State<MarbleProjectPage> {
     ..._edgePrices.values,
   ];
 
+  Map<String, TextEditingController> get _namedFields => {
+    'waste': _waste,
+    'materialPrice': _materialPrice,
+    'labor': _labor,
+    for (final e in _edgePrices.entries) 'edge_${e.key.name}': e.value,
+  };
+
+  late SavedCalculation? _editing = widget.editing;
+
   @override
   void initState() {
     super.initState();
+    if (widget.editing case final saved?) _restore(saved.current.inputs);
     for (final c in _fields) {
       c.addListener(_changed);
     }
     _pricing.addListener(_changed);
+  }
+
+  void _restore(Map<String, Object?> inputs) {
+    _unit =
+        LengthUnit.values.where((u) => u.name == inputs['unit']).firstOrNull ??
+        _unit;
+    _pieces = [
+      for (final p in (inputs['pieces'] as List?) ?? const [])
+        CountertopPiece.fromJson((p! as Map).cast<String, Object?>()),
+    ];
+    final fields = (inputs['fields'] as Map?) ?? const {};
+    for (final e in _namedFields.entries) {
+      if (fields[e.key] case final String text) e.value.text = text;
+    }
+    _pricing.restore((inputs['pricing'] as Map?)?.cast<String, Object?>());
+    _extras = CostSheet.fromJson((inputs['extras'] as List?) ?? const []);
+  }
+
+  CalcRevision _revision(CalculationResult result) => CalcRevision(
+    number: 1,
+    savedAt: DateTime.now(),
+    categoryId: 'marble_granite',
+    kind: CalcKind.marbleProject,
+    modeLabel: 'Tezgâh projesi (${_pieces.length} parça)',
+    inputs: {
+      'unit': _unit.name,
+      'pieces': [for (final p in _pieces) p.toJson()],
+      'fields': {for (final e in _namedFields.entries) e.key: e.value.text},
+      'pricing': _pricing.toJson(),
+      'extras': _extras.toJson(),
+    },
+    result: result,
+  );
+
+  Future<void> _save(CalculationResult? result) async {
+    final saved = await saveFromCalculator(
+      context,
+      revision: result == null ? null : _revision(result),
+      existing: _editing,
+      presetProjectId: widget.presetProjectId,
+    );
+    if (saved != null && mounted) setState(() => _editing = saved);
   }
 
   void _changed() => setState(() {});
@@ -214,7 +272,18 @@ class _MarbleProjectPageState extends State<MarbleProjectPage> {
         );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Mermer tezgâh projesi')),
+      appBar: AppBar(
+        title: Text(
+          _editing?.name ?? 'Mermer tezgâh projesi',
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: [
+          SaveCalculationAction(
+            enabled: result != null,
+            onPressed: () => _save(result),
+          ),
+        ],
+      ),
       bottomNavigationBar: LiveTotalBar(result: result, message: eval.message),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),

@@ -10,6 +10,9 @@ import '../../engine/costing/cost_sheet.dart';
 import '../../engine/measurement.dart';
 import '../costing/cost_items_section.dart';
 import '../costing/pricing_options.dart';
+import '../../domain/records/saved_calculation.dart';
+import '../../engine/calculation_result.dart';
+import '../records/save_calculation_page.dart';
 import 'calculation_form.dart';
 import 'category_hub_page.dart';
 import 'widgets/number_field.dart';
@@ -18,9 +21,20 @@ import 'widgets/result_card.dart';
 /// Ölçüm ve hesaplama ekranı. Her girişte sonuç anlık olarak yeniden
 /// hesaplanır; tüm hesap [evaluateForm] üzerinden motora devredilir.
 class CalculationPage extends StatefulWidget {
-  const CalculationPage({super.key, this.initialCategoryId});
+  const CalculationPage({
+    super.key,
+    this.initialCategoryId,
+    this.editing,
+    this.presetProjectId,
+  });
 
   final String? initialCategoryId;
+
+  /// Kayıtlı hesabı düzenlemek için açıldıysa o hesap; girdiler ondan yüklenir.
+  final SavedCalculation? editing;
+
+  /// Kaydederken önceden seçilecek proje.
+  final String? presetProjectId;
 
   @override
   State<CalculationPage> createState() => _CalculationPageState();
@@ -45,12 +59,60 @@ class _CalculationPageState extends State<CalculationPage> {
   final _pricing = PricingOptionsController();
   CostSheet _extras = const CostSheet();
 
+  late SavedCalculation? _editing = widget.editing;
+
   void _onChanged() => setState(() {});
 
   @override
   void initState() {
     super.initState();
+    if (widget.editing case final saved?) _restore(saved.current.inputs);
     _pricing.addListener(_onChanged);
+  }
+
+  /// Kayıttaki girdileri ekrana yükler.
+  void _restore(Map<String, Object?> inputs) {
+    _categoryId = (inputs['categoryId'] as String?) ?? _categoryId;
+    final modes = modesForCategory(_categoryId);
+    _mode =
+        modes.where((m) => m.name == inputs['mode']).firstOrNull ?? modes.first;
+    _unit =
+        LengthUnit.values.where((u) => u.name == inputs['unit']).firstOrNull ??
+        _unit;
+    final fields = (inputs['fields'] as Map?) ?? const {};
+    for (final f in CalcField.values) {
+      if (fields[f.name] case final String text) _controllers[f]!.text = text;
+    }
+    _pricing.restore((inputs['pricing'] as Map?)?.cast<String, Object?>());
+    _extras = CostSheet.fromJson((inputs['extras'] as List?) ?? const []);
+  }
+
+  /// Kaydedilecek sürüm: girdiler (yazıldığı hâliyle) + sonuç.
+  CalcRevision _revision(CalculationResult result) => CalcRevision(
+    number: 1,
+    savedAt: DateTime.now(),
+    categoryId: _categoryId,
+    kind: CalcKind.quick,
+    modeLabel: _mode.label,
+    inputs: {
+      'categoryId': _categoryId,
+      'mode': _mode.name,
+      'unit': _unit.name,
+      'fields': {for (final f in _mode.fields) f.name: _controllers[f]!.text},
+      'pricing': _pricing.toJson(),
+      'extras': _extras.toJson(),
+    },
+    result: result,
+  );
+
+  Future<void> _save(CalculationResult? result) async {
+    final saved = await saveFromCalculator(
+      context,
+      revision: result == null ? null : _revision(result),
+      existing: _editing,
+      presetProjectId: widget.presetProjectId,
+    );
+    if (saved != null && mounted) setState(() => _editing = saved);
   }
 
   @override
@@ -118,7 +180,18 @@ class _CalculationPageState extends State<CalculationPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.newCalculation)),
+      appBar: AppBar(
+        title: Text(
+          _editing == null ? AppStrings.newCalculation : _editing!.name,
+          overflow: TextOverflow.ellipsis,
+        ),
+        actions: [
+          SaveCalculationAction(
+            enabled: result != null,
+            onPressed: () => _save(result),
+          ),
+        ],
+      ),
       bottomNavigationBar: LiveTotalBar(result: result, message: message),
       body: GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),

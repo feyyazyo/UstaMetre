@@ -66,6 +66,32 @@ class PricingOptionsController extends ChangeNotifier {
 
   String? get error => vatPercent.error ?? discount.error;
 
+  /// Kaydedilmiş hesap için ayarların kopyası (girildiği hâliyle).
+  Map<String, Object?> toJson() => {
+    'vat': vat.text,
+    'discountMode': _discountMode.name,
+    'discountValue': discountValue.text,
+    'display': _display.name,
+  };
+
+  /// Kayıttan geri yükler (düzenleme için).
+  void restore(Map<String, Object?>? json) {
+    if (json == null) return;
+    vat.text = (json['vat'] as String?) ?? vat.text;
+    discountValue.text = (json['discountValue'] as String?) ?? '';
+    _discountMode =
+        DiscountMode.values
+            .where((m) => m.name == json['discountMode'])
+            .firstOrNull ??
+        DiscountMode.none;
+    _display =
+        VatDisplayMode.values
+            .where((m) => m.name == json['display'])
+            .firstOrNull ??
+        VatDisplayMode.excluded;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
     vat.dispose();
