@@ -6,20 +6,46 @@ Tüm meslek grupları için ölçüm, hesaplama ve fiyat teklifi hazırlama uygu
 Flutter ile geliştirilir, öncelikli platform Android'dir. Arayüz Türkçedir ve
 uygulama çevrimdışı (offline-first) çalışacak şekilde tasarlanmıştır.
 
-## Durum (Sprint 3)
+## Durum (Sprint 4)
 
 | Alan | Durum |
 |---|---|
 | Proje iskeleti, tema, alt gezinme (5 ekran) | ✅ |
 | Hızlı hesap: uzunluk, alan, hacim, metre tül, çevre, adet, manuel (tüm kategoriler) | ✅ |
-| Ortak ek maliyet sistemi: ekle, düzenle, sil, kopyala, kendi kalemini oluştur, fiyat listesine kaydet | ✅ Tüm hesap ekranlarında |
-| İndirim (yüzde / tutar), değiştirilebilir KDV, KDV dahil/hariç gösterim | ✅ |
-| Fiyat listesi: malzeme, işçilik, aksesuar, nakliye, diğer; fiyat ve birim geçmişi | ✅ Cihazda saklanır |
-| Mermer ve granit: çok parçalı tezgâh, kenar seçimli sakal/pah/rodaj/kenar işleme, evye, ocak, delikler, nakliye, montaj | ✅ Özel hesap |
-| PVC kapı ve pencere: pencere, kapı, balkon kapısı; cam, profil (manuel / reçete), aksesuar, sineklik, montaj, nakliye | ✅ Özel hesap (profil reçetesi doğrulanmadıkça **tahmini**) |
+| Ortak ek maliyet sistemi, indirim, KDV, KDV dahil/hariç gösterim | ✅ |
+| Fiyat listesi (fiyat ve birim geçmişi) | ✅ Cihazda (SharedPreferences) |
+| Mermer ve granit: çok parçalı tezgâh, kenar işlemleri, evye, montaj… | ✅ Özel hesap |
+| PVC kapı ve pencere: pencere/kapı/balkon kapısı, cam, profil, aksesuar | ✅ Özel hesap (doğrulanmamış reçete **tahmini**) |
+| **Hesap kaydetme** (üç hesap ekranından), sürüm geçmişi, kopyalama, onaylı silme | ✅ Cihazda (SQLite) |
+| **Hesap geçmişi**: ada göre arama, meslek filtresi, tarih sıralaması, ayrıntı | ✅ |
+| **Müşteriler**: ekle, düzenle, sil, ara; müşterinin projeleri ve hesapları | ✅ |
+| **Projeler**: 6 durum, müşteri bağlantısı, birden fazla hesap, arama ve durum filtresi | ✅ |
+| JSON yedekleme / geri yükleme | 🟡 Altyapı ve testler hazır; arayüzde **yok** (Ayarlar → Yedekleme "Yakında") |
 | Diğer 11 kategorinin mesleğe özel hesapları | ⏳ Henüz yok (arayüzde "Genel hesap") |
-| Hesap sonuçlarını kaydetme, proje / teklif / müşteri, PDF teklif | ⏳ Sonraki sprintler (veri yapısı hazır: `CalculationResult.toJson`) |
+| Teklif, PDF, paylaşım | ⏳ Bu sprintin kapsamı dışında |
 | GitHub Actions: analyze, test, APK artifact | ✅ |
+
+### Kayıtlar ve veri güvenliği (Sprint 4)
+
+- **Veritabanı:** SQLite (`sqflite`), cihazda; internet gerekmez. Tablolar: `customers`,
+  `projects`, `calculations`, `calculation_revisions`. Veritabanı işlemleri
+  `lib/data/records_repository.dart` içindedir; ekranlar `RecordsController` üzerinden erişir.
+- **Şema sürümleme:** Şema yalnızca sıralı geçişlerle kurulur (`AppDatabase.migrations`).
+  Güncellemede yalnızca eksik adımlar çalışır, kayıtlar silinmez; yükseltmeden önce dosyanın
+  yedeği alınır (`ustametre.db.v<eski>.bak`). Daha yeni şemalı bir veritabanı açılmaz ve
+  silinmez.
+- **Kayıt biçimi sürümü:** Her hesap sürümü `schema` alanı taşır; eski biçimler
+  `migrateRevisionJson` ile adım adım taşınır. Okunamayan / daha yeni biçimli kayıtlar
+  **silinmez**, "okunamayan kayıt" olarak bildirilir ve yedeğe ham hâliyle girer.
+- **Kayıt anındaki değerler:** Girdiler (ölçüler, birimler, fire, birim fiyatlar, ek kalemler,
+  indirim, KDV) ve sonuç (satırlar, kategori toplamları, KDV, genel toplam, açıklama adımları)
+  kaydedildiği hâliyle saklanır. Sonuç geri yüklenirken **yeniden hesaplanmaz**; fiyat listesi
+  veya hesap kuralları değişse de eski kayıt değişmez.
+- **Düzenleme = yeni sürüm:** Kayıtlı hesap "Düzenle" ile kendi ekranında açılır; kaydedilince
+  yeni sürüm eklenir, önceki sürümler korunur ve ayrıntı ekranından görülebilir. İstenirse
+  "ayrı yeni hesap" olarak da kaydedilebilir. Ad / müşteri / proje değişikliği sürüm oluşturmaz.
+- **Silme:** Hesap silme onay ister. Müşteri veya proje silindiğinde bağlı projeler ve hesaplar
+  **silinmez**, yalnızca bağlantıları kaldırılır (`ON DELETE SET NULL` + açık güncelleme).
 
 ### Hesap kuralları
 
@@ -59,7 +85,7 @@ lib/
 ├── main.dart                 # Giriş: cihazdaki kataloğu yükler
 ├── app/                      # MaterialApp ve alt gezinme kabuğu
 ├── core/                     # Türkçe metinler, renkler, tema
-├── domain/                   # Saf Dart iş modelleri (meslek kategorileri)
+├── domain/                   # Saf Dart iş modelleri (kategoriler, records/: müşteri, proje, hesap)
 ├── engine/                   # Saf Dart hesaplama motoru (Flutter'a bağımlı DEĞİL)
 │   ├── money.dart, measurement.dart, number_parser.dart, number_format.dart
 │   ├── pricing.dart          # Satır, indirim, KDV, özet
@@ -67,11 +93,13 @@ lib/
 │   ├── calculation_result.dart  # Sonuç + JSON (PDF teklife hazır)
 │   ├── costing/              # CostItem, CostSheet, PriceList (geçmişli)
 │   └── calculators/          # Genel ölçü, mermer (hızlı + proje), PVC doğrama
-├── data/                     # Offline depolama ve katalog (fiyat listesi, reçeteler)
+├── data/                     # Offline depolama: katalog (SharedPreferences),
+│   │                         # kayıtlar (SQLite: db/app_database.dart, records_repository.dart)
 ├── features/
 │   ├── calculations/         # Hızlı hesap, kategori seçimi, marble/, pvc/
 │   ├── costing/              # Ortak ek maliyet editörü, fiyatlandırma seçenekleri
 │   ├── price_list/           # Fiyat listesi ekranı
+│   ├── records/              # Kaydetme, hesap geçmişi, ayrıntı/sürümler, editörler
 │   └── home/ projects/ quotes/ customers/ settings/
 └── shared/                   # Ortak widget'lar, giriş ayrıştırma
 test/

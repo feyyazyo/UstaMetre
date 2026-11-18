@@ -4,6 +4,9 @@ import 'package:ustametre/core/theme/app_theme.dart';
 import 'package:ustametre/data/catalog_controller.dart';
 import 'package:ustametre/data/catalog_scope.dart';
 import 'package:ustametre/data/key_value_store.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:ustametre/data/records_controller.dart';
+import 'package:ustametre/data/records_repository.dart';
 import 'package:ustametre/engine/ids.dart';
 
 /// Testler için bellek içi katalog (öngörülebilir kimliklerle).
@@ -13,20 +16,50 @@ CatalogController testCatalog() => CatalogController(
   clock: () => DateTime.utc(2026, 11, 1),
 );
 
-/// Bir sayfayı tema ve katalogla birlikte telefon boyutunda açar.
+/// Gerçek SQLite (bellek içi) ile kayıt deposu. Widget testlerinde
+/// FakeAsync ile uyumlu olan yalıtımsız (no-isolate) fabrika kullanılır.
+Future<RecordsController> testRecords(
+  WidgetTester tester, {
+  String path = inMemoryDatabasePath,
+}) async {
+  sqfliteFfiInit();
+  final repo = (await tester.runAsync(
+    () => RecordsRepository.open(
+      databaseFactoryFfiNoIsolate,
+      path,
+      ids: SequentialIdGenerator('k'),
+      clock: () => DateTime(2026, 11, 18, 10, 30),
+    ),
+  ))!;
+  final records = RecordsController(repo);
+  await tester.runAsync(records.load);
+  return records;
+}
+
+/// Bir sayfayı tema, katalog ve kayıt deposuyla telefon boyutunda açar.
 Future<CatalogController> pumpScreen(
   WidgetTester tester,
   Widget home, {
   CatalogController? catalog,
+  RecordsController? records,
 }) async {
   tester.view.physicalSize = const Size(1080, 2340);
   tester.view.devicePixelRatio = 3;
   addTearDown(tester.view.reset);
   final c = catalog ?? testCatalog();
+  final r = records ?? await testRecords(tester);
   await tester.pumpWidget(
-    CatalogScope(
-      controller: c,
-      child: MaterialApp(theme: AppTheme.dark(), home: home),
+    RecordsScope(
+      controller: r,
+      child: CatalogScope(
+        controller: c,
+        // Her çağrıda yeni uygulama: önceki gezinme geçmişi taşınmaz.
+        child: MaterialApp(
+          key: UniqueKey(),
+          theme: AppTheme.dark(),
+          home: home,
+        ),
+      ),
     ),
   );
   await tester.pumpAndSettle();

@@ -5,6 +5,7 @@ import '../features/calculations/calculations_page.dart';
 import '../features/customers/customers_page.dart';
 import '../features/home/home_page.dart';
 import '../features/projects/projects_page.dart';
+import '../features/records/record_editors.dart';
 import '../features/quotes/quotes_page.dart';
 import '../features/settings/settings_page.dart';
 
@@ -29,6 +30,15 @@ class _AppShellState extends State<AppShell> {
 
   void _select(AppTab tab) => setState(() => _tab = tab);
 
+  /// Projeler sekmesine geçer ve yeni proje ekranını açar.
+  Future<void> _newProject() async {
+    _select(AppTab.projects);
+    final created = await showProjectEditor(context);
+    if (created != null && mounted) {
+      await openProjectDetail(context, created.id);
+    }
+  }
+
   void _openCustomers() {
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (_) => const CustomersPage()));
@@ -42,7 +52,7 @@ class _AppShellState extends State<AppShell> {
         children: [
           HomePage(
             onNewCalculation: () => CalculationsPage.openCalculation(context),
-            onNewProject: () => _select(AppTab.projects),
+            onNewProject: _newProject,
             onNewQuote: () => _select(AppTab.quotes),
             onCustomers: _openCustomers,
           ),

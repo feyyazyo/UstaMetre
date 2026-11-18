@@ -4,6 +4,8 @@ import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/trade_category.dart';
 import '../../shared/widgets/status_badge.dart';
+import '../../data/records_controller.dart';
+import '../records/history_page.dart';
 import 'calculation_page.dart';
 import 'category_hub_page.dart';
 import 'category_icons.dart';
@@ -33,11 +35,28 @@ class CalculationsPage extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           if (index == 0) {
-            return FilledButton.icon(
-              key: const ValueKey('start_calculation'),
-              onPressed: () => openCalculation(context),
-              icon: const Icon(Icons.add),
-              label: const Text(AppStrings.newCalculation),
+            final saved = RecordsScope.of(context).calculations.length;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                FilledButton.icon(
+                  key: const ValueKey('start_calculation'),
+                  onPressed: () => openCalculation(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text(AppStrings.newCalculation),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  key: const ValueKey('open_history'),
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => const HistoryPage(),
+                    ),
+                  ),
+                  icon: const Icon(Icons.history),
+                  label: Text('Hesap Geçmişi ($saved kayıtlı)'),
+                ),
+              ],
             );
           }
           if (index == 1) {

@@ -116,7 +116,7 @@ class SettingsPage extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Sürüm 0.3.0 · Çevrimdışı çalışır; verileriniz '
+                    'Sürüm 0.4.0 · Çevrimdışı çalışır; verileriniz '
                     'cihazınızda kalır.',
                     style: TextStyle(color: AppColors.textSecondary),
                   ),

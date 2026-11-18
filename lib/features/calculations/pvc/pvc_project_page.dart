@@ -2,7 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../data/catalog_scope.dart';
+import '../../../domain/records/saved_calculation.dart';
 import '../../../engine/calculation_result.dart';
+import '../../records/save_calculation_page.dart';
 import '../../../engine/calculator.dart';
 import '../../../engine/calculators/pvc_joinery_calculator.dart';
 import '../../../engine/costing/cost_sheet.dart';
@@ -20,7 +22,11 @@ import 'recipe_pages.dart';
 
 /// PVC kapı ve pencere doğrama projesi.
 class PvcProjectPage extends StatefulWidget {
-  const PvcProjectPage({super.key});
+  const PvcProjectPage({super.key, this.editing, this.presetProjectId});
+
+  /// Kayıtlı hesabı düzenlemek için açıldıysa o hesap.
+  final SavedCalculation? editing;
+  final String? presetProjectId;
 
   @override
   State<PvcProjectPage> createState() => _PvcProjectPageState();
@@ -34,9 +40,58 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
   final _profileWaste = TextEditingController();
   final _glassWaste = TextEditingController();
 
+  late SavedCalculation? _editing = widget.editing;
+
+  void _restore(Map<String, Object?> inputs) {
+    _unit =
+        LengthUnit.values.where((u) => u.name == inputs['unit']).firstOrNull ??
+        _unit;
+    _items = [
+      for (final i in (inputs['items'] as List?) ?? const [])
+        JoineryItem.fromJson((i! as Map).cast<String, Object?>()),
+    ];
+    final fields = (inputs['fields'] as Map?) ?? const {};
+    if (fields['profileWaste'] case final String t) _profileWaste.text = t;
+    if (fields['glassWaste'] case final String t) _glassWaste.text = t;
+    _pricing.restore((inputs['pricing'] as Map?)?.cast<String, Object?>());
+    _extras = CostSheet.fromJson((inputs['extras'] as List?) ?? const []);
+  }
+
+  /// Hesapta kullanılan kalemler (reçete kopyaları dahil) saklanır.
+  CalcRevision _revision(CalculationResult result, List<JoineryItem> used) =>
+      CalcRevision(
+        number: 1,
+        savedAt: DateTime.now(),
+        categoryId: 'pvc_joinery',
+        kind: CalcKind.pvcProject,
+        modeLabel: 'Doğrama projesi (${used.length} kalem)',
+        inputs: {
+          'unit': _unit.name,
+          'items': [for (final i in used) i.toJson()],
+          'fields': {
+            'profileWaste': _profileWaste.text,
+            'glassWaste': _glassWaste.text,
+          },
+          'pricing': _pricing.toJson(),
+          'extras': _extras.toJson(),
+        },
+        result: result,
+      );
+
+  Future<void> _save(CalculationResult? result, List<JoineryItem> used) async {
+    final saved = await saveFromCalculator(
+      context,
+      revision: result == null ? null : _revision(result, used),
+      existing: _editing,
+      presetProjectId: widget.presetProjectId,
+    );
+    if (saved != null && mounted) setState(() => _editing = saved);
+  }
+
   @override
   void initState() {
     super.initState();
+    if (widget.editing case final saved?) _restore(saved.current.inputs);
     _profileWaste.addListener(_changed);
     _glassWaste.addListener(_changed);
     _pricing.addListener(_changed);
@@ -157,6 +212,7 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
     final glassWaste = parseField(_glassWaste.text);
     CalculationResult? result;
     String? message;
+    final used = _withFreshRecipes(catalog.recipes);
     final fieldError = profileWaste.error ?? glassWaste.error ?? _pricing.error;
     if (fieldError != null) {
       message = 'Hatalı alanları düzeltin.';
@@ -164,7 +220,7 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
       try {
         result = const PvcJoineryCalculator().calculate(
           PvcProjectInput(
-            items: _withFreshRecipes(catalog.recipes),
+            items: used,
             unit: _unit,
             profileWastePercent: profileWaste.value,
             glassWastePercent: glassWaste.value,
@@ -180,15 +236,22 @@ class _PvcProjectPageState extends State<PvcProjectPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('PVC doğrama'),
+        title: Text(
+          _editing?.name ?? 'PVC doğrama',
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
-          TextButton.icon(
+          IconButton(
             key: const ValueKey('open_recipes'),
+            tooltip: 'Profil reçeteleri',
             onPressed: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const RecipeListPage()),
             ),
             icon: const Icon(Icons.rule_folder_outlined),
-            label: const Text('Profil reçeteleri'),
+          ),
+          SaveCalculationAction(
+            enabled: result != null,
+            onPressed: () => _save(result, used),
           ),
         ],
       ),
