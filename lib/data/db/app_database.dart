@@ -32,6 +32,8 @@ abstract final class AppDatabase {
       path,
       options: OpenDatabaseOptions(
         version: target,
+        // Bellek içi veritabanında her açılış ayrı (paylaşılmayan) olmalı.
+        singleInstance: path != inMemoryDatabasePath,
         onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
         onCreate: (db, version) async {
           for (var i = 0; i < version; i++) {

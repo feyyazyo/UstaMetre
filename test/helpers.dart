@@ -53,7 +53,12 @@ Future<CatalogController> pumpScreen(
       controller: r,
       child: CatalogScope(
         controller: c,
-        child: MaterialApp(theme: AppTheme.dark(), home: home),
+        // Her çağrıda yeni uygulama: önceki gezinme geçmişi taşınmaz.
+        child: MaterialApp(
+          key: UniqueKey(),
+          theme: AppTheme.dark(),
+          home: home,
+        ),
       ),
     ),
   );
