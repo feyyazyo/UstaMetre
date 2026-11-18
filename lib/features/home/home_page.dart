@@ -2,7 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../core/constants/app_strings.dart';
 import '../../core/theme/app_colors.dart';
+import '../../data/records_controller.dart';
 import '../../domain/trade_category.dart';
+import '../records/history_page.dart';
 import '../../shared/widgets/shortcut_card.dart';
 
 /// Ana sayfa: marka başlığı, hızlı işlem kısayolları ve özet bilgiler.
@@ -83,6 +85,38 @@ class HomePage extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 28),
+            Builder(
+              builder: (context) {
+                final records = RecordsScope.of(context);
+                return Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: ListTile(
+                    key: const ValueKey('home_history'),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: const Icon(Icons.history, color: AppColors.gold),
+                    title: const Text('Hesap Geçmişi'),
+                    subtitle: Text(
+                      records.isAvailable
+                          ? '${records.calculations.length} hesap · '
+                                '${records.projects.length} proje · '
+                                '${records.customers.length} müşteri'
+                          : 'Kayıtlar şu an kullanılamıyor',
+                      style: const TextStyle(color: AppColors.textSecondary),
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const HistoryPage(),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),

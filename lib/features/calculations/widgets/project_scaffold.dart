@@ -76,9 +76,13 @@ class ItemActionsRow extends StatelessWidget {
     required this.onEdit,
     required this.onCopy,
     required this.onDelete,
+    this.copyLabel = 'Kopyala',
+    this.copyIcon = Icons.copy_outlined,
   });
 
   final String keyPrefix;
+  final String copyLabel;
+  final IconData copyIcon;
   final VoidCallback onEdit;
   final VoidCallback onCopy;
   final VoidCallback onDelete;
@@ -106,7 +110,7 @@ class ItemActionsRow extends StatelessWidget {
     return Row(
       children: [
         action('edit', Icons.edit_outlined, 'Düzenle', onEdit),
-        action('copy', Icons.copy_outlined, 'Kopyala', onCopy),
+        action('copy', copyIcon, copyLabel, onCopy),
         action(
           'delete',
           Icons.delete_outline,

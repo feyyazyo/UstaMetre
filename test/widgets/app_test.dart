@@ -13,6 +13,7 @@ import 'package:ustametre/features/calculations/pvc/recipe_pages.dart';
 import 'package:ustametre/features/price_list/price_list_page.dart';
 import 'package:ustametre/features/customers/customers_page.dart';
 import 'package:ustametre/features/projects/projects_page.dart';
+import 'package:ustametre/features/records/record_editors.dart';
 import 'package:ustametre/features/quotes/quotes_page.dart';
 import 'package:ustametre/features/settings/settings_page.dart';
 
@@ -110,6 +111,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const ValueKey('shortcut_new_project')));
+    await tester.pumpAndSettle();
+    // Yeni proje ekranı açılır; vazgeçince Projeler sekmesi görünür.
+    expect(find.byType(ProjectEditorPage), findsOneWidget);
+    await tester.tap(find.byTooltip('Close'));
     await tester.pumpAndSettle();
     expect(find.byType(ProjectsPage).hitTestable(), findsOneWidget);
 
