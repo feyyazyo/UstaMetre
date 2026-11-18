@@ -77,6 +77,38 @@ final class CountertopPiece {
     edges: edges ?? this.edges,
   );
 
+  Map<String, Object?> toJson() => {
+    'id': id,
+    'name': name,
+    'length': length?.toString(),
+    'depth': depth?.toString(),
+    'quantity': quantity,
+    'edges': {
+      for (final e in edges.entries)
+        if (e.value.isNotEmpty) e.key.name: [for (final x in e.value) x.name],
+    },
+  };
+
+  factory CountertopPiece.fromJson(Map<String, Object?> json) {
+    Decimal? dec(Object? v) => v == null ? null : Decimal.parse(v as String);
+    final edges = <EdgeOperation, Set<CountertopEdge>>{};
+    final raw = (json['edges'] as Map?) ?? const {};
+    for (final e in raw.entries) {
+      edges[EdgeOperation.values.byName(e.key as String)] = {
+        for (final x in e.value as List)
+          CountertopEdge.values.byName(x as String),
+      };
+    }
+    return CountertopPiece(
+      id: json['id']! as String,
+      name: (json['name'] as String?) ?? '',
+      length: dec(json['length']),
+      depth: dec(json['depth']),
+      quantity: (json['quantity'] as int?) ?? 1,
+      edges: edges,
+    );
+  }
+
   /// [op] işleminde [edge] kenarını açar/kapatır.
   CountertopPiece toggleEdge(EdgeOperation op, CountertopEdge edge) {
     final current = {...edgesFor(op)};

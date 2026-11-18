@@ -152,6 +152,37 @@ final class ProfileRecipe {
 /// Doğramanın profil metrajı nasıl bulunacak.
 sealed class ProfileSpec {
   const ProfileSpec();
+
+  Map<String, Object?> toJson() => switch (this) {
+    ManualProfile(:final metersPerUnit, :final pricePerMeter) => {
+      'type': 'manual',
+      'metersPerUnit': metersPerUnit.toString(),
+      'pricePerMeterKurus': pricePerMeter.kurus.toString(),
+    },
+    // Reçete kopyası saklanır: reçete sonradan değişse/silinse de kayıt aynı.
+    RecipeProfile(:final recipe) => {
+      'type': 'recipe',
+      'recipe': recipe.toJson(),
+    },
+  };
+
+  static ProfileSpec? fromJson(Object? json) {
+    if (json is! Map) return null;
+    return switch (json['type']) {
+      'manual' => ManualProfile(
+        metersPerUnit: Decimal.parse(json['metersPerUnit']! as String),
+        pricePerMeter: Money.fromKurusBig(
+          BigInt.parse(json['pricePerMeterKurus']! as String),
+        ),
+      ),
+      'recipe' => RecipeProfile(
+        ProfileRecipe.fromJson(
+          (json['recipe']! as Map).cast<String, Object?>(),
+        ),
+      ),
+      _ => null,
+    };
+  }
 }
 
 /// Kullanıcı tek doğrama için toplam profil metrajını kendisi girer.
@@ -213,6 +244,46 @@ final class JoineryItem {
   final Money? accessoryPricePerUnit;
   final bool flyScreen;
   final Money? flyScreenPricePerUnit;
+
+  Map<String, Object?> toJson() {
+    String? money(Money? m) => m?.kurus.toString();
+    return {
+      'id': id,
+      'type': type.name,
+      'name': name,
+      'width': width?.toString(),
+      'height': height?.toString(),
+      'quantity': quantity,
+      'glassType': glassType,
+      'glassPriceKurus': money(glassPricePerSquareMeter),
+      'glassAreaPerUnit': glassAreaPerUnit?.toString(),
+      'profile': profile?.toJson(),
+      'accessoryPriceKurus': money(accessoryPricePerUnit),
+      'flyScreen': flyScreen,
+      'flyScreenPriceKurus': money(flyScreenPricePerUnit),
+    };
+  }
+
+  factory JoineryItem.fromJson(Map<String, Object?> json) {
+    Decimal? dec(Object? v) => v == null ? null : Decimal.parse(v as String);
+    Money? money(Object? v) =>
+        v == null ? null : Money.fromKurusBig(BigInt.parse(v as String));
+    return JoineryItem(
+      id: json['id']! as String,
+      type: JoineryType.values.byName(json['type']! as String),
+      name: (json['name'] as String?) ?? '',
+      width: dec(json['width']),
+      height: dec(json['height']),
+      quantity: (json['quantity'] as int?) ?? 1,
+      glassType: (json['glassType'] as String?) ?? '',
+      glassPricePerSquareMeter: money(json['glassPriceKurus']),
+      glassAreaPerUnit: dec(json['glassAreaPerUnit']),
+      profile: ProfileSpec.fromJson(json['profile']),
+      accessoryPricePerUnit: money(json['accessoryPriceKurus']),
+      flyScreen: (json['flyScreen'] as bool?) ?? false,
+      flyScreenPricePerUnit: money(json['flyScreenPriceKurus']),
+    );
+  }
 
   JoineryItem copyWith({
     JoineryType? type,
